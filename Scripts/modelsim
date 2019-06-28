@@ -1,0 +1,4 @@
+#!/bin/bash
+
+bash /home/andre/altera/13.0sp1/modelsim_ase/bin/vsim
+

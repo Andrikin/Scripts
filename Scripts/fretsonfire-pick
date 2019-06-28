@@ -1,0 +1,28 @@
+#!/bin/bash
+#Script para pick automatizado do jogo Frets On Fire
+#Não está pronto ainda
+
+while true
+   do
+#   xdotool search --class "FretsOnFire.py"
+   read -s -n 2 -t 0.08 valor
+   if (( ${#valor} == 1 ))
+      then
+      case $valor
+         in
+         [asdjk])
+         xdotool search --name "Frets on Fire" keydown $valor
+         xdotool search --name "Frets on Fire" key space
+         xdotool search --name "Frets on Fire" keyup $valor;;
+      esac
+      else
+      case $valor
+	 in
+	 [*])
+#         xdotool search --name "Frets on Fire" keydown ${valor:0:1} ${valor:1:1}
+         xdotool search --name "Frets on Fire" type $valor
+         xdotool search --name "Frets on Fire" key space;;
+#         xdotool search --name "Frets on Fire" keyup ${valor:0:1} ${valor:1:1};;
+      esac
+   fi
+done

@@ -1,0 +1,43 @@
+#!/bin/bash
+#Simples script para copiar arquivos selecionados para uma pasta de backup
+
+#Fazendo a copia de todos os arquivos:
+#Não é necessário que se coloque o nome do arquivo no final do destino: .local/bin/concatenateAudio (uso desnecessário) - .local/bin/ (uso correto)
+
+erro_abortar(){
+   notify-send --expire-time=2250 'Arquivos' 'Falharam ao serem copiados...'
+}
+trap erro_abortar EXIT
+set -e
+
+#Usando rsync -a invés de cp, para somente gravar a diferença entre os arquivos
+rsync -a ~/.config/i3/config ~/OpenDrive/Configurações\ i3wm/i3Backup;
+rsync -a ~/.config/i3status/config ~/OpenDrive/Configurações\ i3wm/i3StatusBackup;
+rsync -a ~/.vim/vimrc ~/OpenDrive/Configurações\ i3wm/vimrcBackup;
+rsync -a ~/.config/rofi/config ~/OpenDrive/Configurações\ i3wm/rofiConfigBackup;
+rsync -a ~/.bashrc ~/OpenDrive/Configurações\ i3wm/bashrcBackup;
+rsync -a ~/Scripts/alias.sh ~/OpenDrive/Configurações\ i3wm/aliasBackup;
+
+#Arquivos que serão salvos e irão para ~/.local/bin/:
+rsync -a ~/Scripts/i3Backup ~/OpenDrive/Configurações\ i3wm/ScriptParaBackups;
+rsync -a ~/Scripts/i3Backup ~/.local/bin/;
+
+rsync -a ~/Scripts/youtube-flac ~/OpenDrive/Configurações\ i3wm/ScriptYoutubeFlac;
+rsync -a ~/Scripts/youtube-flac ~/.local/bin/;
+
+rsync -a ~/Scripts/sox-concatenate ~/OpenDrive/Configurações\ i3wm/sox-concatenate;
+rsync -a ~/Scripts/sox-concatenate ~/.local/bin/;
+
+rsync -a ~/Scripts/concatenateAudio ~/OpenDrive/Configurações\ i3wm/concatenateAudio;
+rsync -a ~/Scripts/concatenateAudio ~/.local/bin/;
+
+rsync -a ~/Scripts/ffseries ~/OpenDrive/Configurações\ i3wm/ffseries;
+rsync -a ~/Scripts/ffseries ~/.local/bin/;
+
+#rsync -a ~/Scripts/modelsim ~/.local/bin/;
+
+#Mandando mensagem de operação concluída:
+sucesso(){
+   notify-send --expire-time=2250 'Arquivos' 'Copiados!'
+}
+trap sucesso EXIT

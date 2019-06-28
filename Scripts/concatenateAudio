@@ -1,0 +1,74 @@
+#!/bin/bash
+#Script para juntar arquivos de audio em um único arquivo
+#Uso: mergeAudioLinux arg1 arg2 ...
+#Script colocado em .local/bin/ para melhor uso
+#Script depreciado. Programa SoX produz o mesmo resultado.
+#Possível nova utilidade caso SoX não funcione por diferença de samplerate dos arquivos
+
+erro_abortar(){
+notify-send --expire-time=3250 "Arquivo: $audio" "Falhou ao ser criado..."
+}
+
+trap erro_abortar EXIT
+set -e
+
+declare -a arq_renomeados
+num=0
+
+clear
+echo "Digite o nome do arquivo final: "
+read audio;
+clear
+#O comando cat será responsável por juntar os dados, enquanto ffmpeg organizaráestes dados (estabelecendo o tempo de duração total do audio, de forma que não entre em conflito com o player's). $@ listará todos os arquivos que foram passados como argumento para o script. Da mesma forma que $1 obterá o primeiro argumento passado, $2 o segundo, e assim em diante
+#Opção para remover os arquivos originais
+echo "Gostaria de remover os arquivos originais ao final do processo? [s/n]"
+read resposta;
+clear
+while [[ $resposta != [01] ]]
+   do
+   case $resposta in
+      [Ss])resposta="0";;
+      [Nn])resposta="1";;
+      *)echo "ERRO! Digite uma das opções possíveis: [s/n]"
+        read resposta
+        clear;;
+   esac
+done
+
+#Colocar aqui um método para verificar se os arquivos são flac e modificá-los, caso necessário
+echo "Verificando arquivos..."
+for arq in "$@"
+   do
+   if [[ "${arq}" != *".flac" ]]
+      then
+      ffmpeg -i "$arq" "${arq%.*}".flac -loglevel quiet
+      arq_renomeados[$num]="${arq%.*}.flac"
+      num=$(($num+1))
+      rm "$arq"
+      else
+      arq_renomeados[$num]="$arq"
+      num=$(($num+1))
+   fi
+done
+clear
+
+echo "Juntando arquivos...";
+#Ao usar '@' estaremos pegando cada array individualmente. Diferente de usar '*', que será substituído por qualquer valor possível de índice do array
+cat "${arq_renomeados[@]}" > temp.flac;
+clear
+echo "Finalizando arquivo...";
+ffmpeg -i temp.flac "$audio".flac -loglevel quiet;
+clear
+echo "Removendo arquivos..."
+rm temp.flac;
+#Remove os arquivos originais
+if [ $resposta = 0 ] 
+   then
+      rm "${arq_renomeados[@]}";
+fi;
+
+sucesso(){
+notify-send --expire-time=3250 "Arquivo: $audio" "Criado com sucesso!"
+clear
+}
+trap sucesso EXIT

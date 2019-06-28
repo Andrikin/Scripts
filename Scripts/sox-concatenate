@@ -1,0 +1,96 @@
+#!/bin/bash
+#Script para juntar arquivos de audio em um único arquivo
+#Uso: sox-concatenate arg1 arg2 ...
+#Script colocado em .local/bin para melhor uso
+#Script utiliza programa sox para concatenar os arquivos de audio. É necessário que todos os arquivos tenham o mesmo samplerate para serem concatenados
+#Script atualizado para igualar o samplerate dos arquivos antes de concatená-los
+#Script atualizado para concatenar todos os arquivos caso estes tenham o mesmo samplerate - Arrumado a ordem em que os arquivos são concatenados
+
+erro_abortar(){
+   notify-send --expire-time=3250 "sox-concatenate: $audio" "Falhou ao ser criado..."
+}
+#Trap será ativada quando o comando EXIT (ou o sinal 0) acontecer, sinal esse originado do comando "set -e" (interrompe comandos, pipeline's, etc. Não interrompe quando erros acontecem dentro de comandos como: "while", "if", "for", etc [acredito que seja isso]).
+trap erro_abortar EXIT
+set -e
+
+samplerate=44100
+samplerate48k=48000
+procurando=0
+arg=("$@")
+num=0
+
+clear
+echo "Digite o nome do arquivo final: "
+read audio;
+clear
+#Opção para remover os arquivos originais
+echo "Gostaria de remover os arquivos originais ao final do processo? [s/n]"
+read resposta;
+clear
+#Duplo [[ ]] sempre irá avaliar a expressão condicional (de strings e comparações aritméticas, funcionando melhor para comparações entre strings) e retornar um valor 0 (true) ou 1 (false). Quando ele verificar que a expressão é falsa, irá pular o "do", ou seja, interromperá o loop.
+while [[ $resposta != [01] ]]
+   do
+   case $resposta 
+      in
+      [Ss])resposta="0";;
+      [Nn])resposta="1";;
+      *)echo "ERRO! Escolha uma das opções possíveis: [s/n]"
+        read resposta
+        clear;;
+   esac;
+done
+
+#Verificação de correção de sample-rate --Repensar uma forma de não usar pasta temp/--
+clear
+echo "Verificando e corrigindo samplerate dos arquivos..."
+mkdir temp
+while (( $procurando == 0 && $num < $# ))
+   do
+   var_local=`soxi -r "${arg[$num]}"`
+   if (( $var_local == $samplerate48k ))
+      then
+      cp "${arg[$num]}" temp/"$num - ${arg[$num]}"
+      num=$(($num+1))   
+      else
+      if [ -e temp/*.flac ]
+	 then
+	 rm temp/*.flac
+      fi;
+      procurando=1
+      num=0
+      for ind in "$@"
+	 do
+	 if (( `soxi -r "$ind"` > $samplerate ))
+	    then
+	    #'-V[number]' determina como mostrará as messagens do SoX: como messagens de informação, alertas, etc. -V0 retira todas as messangens.
+	    sox "$ind" -V0 -r "$samplerate" temp/"$num - $ind"
+	    num=$(($num+1))   
+	    else
+	    cp "$ind" temp/"$num - $ind"
+	    num=$(($num+1))   
+	 fi;
+      done;
+   fi;
+   done;
+ echo
+   
+clear
+echo "Juntando arquivos...";
+sox temp/*.flac "$audio".flac;
+
+#Remove os arquivos originais se selecionada a opção
+rm -r temp/
+if [ $resposta = 0 ] 
+   then
+      clear
+      echo "Removendo arquivos..."
+      rm "$@";
+fi;
+#Criamos outro "trap" para sinalizar o processo concluído com sucesso. Um trap sobrescreve (?) outro a partir daquele ponto. Isso nos dá brecha para criar método que informa corretamente quando algo dá errado no decorrer do script
+sucesso(){
+   notify-send --expire-time=3250 "sox-concatenate: Concluído com Sucesso!" "$audio"
+   clear
+}
+trap sucesso EXIT
+
+#OBS.: Variável que indica o número de argumentos passados na linha de comando: "$#" (total de argumentos)

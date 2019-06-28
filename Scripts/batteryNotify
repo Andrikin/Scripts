@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while
+do
+	info_battery=`acpi -b | sed	"s/^.*\(Discharging\).*$/\1/"`
+	if ${info_battery} == "Discharging"
+	then
+		notify-send -u critical -t 3500 "Battery is ${info_battery}"
+	fi
+done
