@@ -2,11 +2,10 @@
 
 while true
 do
-	info_battery=`acpi -b | sed	"s/^.*\(Discharging\|Charging\).*$/\1/"`
+	info_battery="$(acpi -b | sed	"s/^.*\(Discharging\|Charging\).*$/\1/")"
 	if [ $info_battery == "Discharging" ]
 	then
 		notify-send -u critical -t 10000 "Fonte está DESCONECTADA!"
 		sleep 10s
 	fi
-	sleep 1m
 done
