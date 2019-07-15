@@ -30,7 +30,7 @@ action=$(printf 'Play\nPause\nProcurarMúsica\nEncerrarMúsica\n%s' "$song" | dm
 # Identifica corretamente o ID do processo que pertence à música
 id_flac=$(pidof $programa)
 # Podemos identificar o sucesso do comando com [[ $id_flac == '' ]]
-if [[ $? != 0 ]]; then
+if [[ $id_flac == '' ]]; then
 	id_flac=$(pidof $programa2)
 fi
 
