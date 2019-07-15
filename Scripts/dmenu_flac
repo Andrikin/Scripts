@@ -5,7 +5,7 @@
 lista_de_musicas="$HOME"/.local/share/listas_musicas.txt
 
 [[ ! -e "$lista_de_musicas" ]] && {
-	(locate *.flac > "$lista_de_musicas" && locate *.mp3 >> "$lista_de_musicas")
+	(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas")
 }
 	
 # Programa usado para tocar as músicas (Faz parte do pacote SoX)
@@ -42,7 +42,7 @@ abrir_arquivo() {
 	nome_escolhido_arquivo=$(printf '%s\n' "${nome_arquivos[@]}" | dmenu $* -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 	# Busca exatamente pelo "pattern" passado
-	caminho_completo=$(locate -b "$nome_escolhido_arquivo")
+	caminho_completo=$(find "$HOME"/Música/ -name "$nome_escolhido_arquivo")
 	if [[ $nome_escolhido_arquivo != *.mp3 ]]; then
 		play "$caminho_completo"
 	else
@@ -54,7 +54,7 @@ case "$action" in
 	ProcurarMúsica) abrir_arquivo;;
 	Play) kill -cont "$id_flac";;
 	Pause) kill -stop "$id_flac";;
-	AtualizarMúsicas)(locate *.flac > "$lista_de_musicas" && locate *.mp3 >> "$lista_de_musicas");;
+	AtualizarMúsicas)(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas");;
 	EncerrarMúsica) pkill "$programaFLAC";;
 esac
 
