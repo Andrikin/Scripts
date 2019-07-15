@@ -1,37 +1,34 @@
 #!/usr/bin/env bash
-# Cógigo encontrado pronto porém modificado
+# Utiliza os programas SoX e FFMpeg
+# Dmenu_flac cria um menu interativo para busca e interação básica com música (e audio em geral) que estão armazanados no computador.
 
-lista_de_musicas=/home/andre/.local/share/listas_musicas.txt
+lista_de_musicas="$HOME"/.local/share/listas_musicas.txt
 
 [[ ! -e "$lista_de_musicas" ]] && {
-	locate *.flac > "$lista_de_musicas" && locate *.mp3 >> "$lista_de_musicas"
+	(locate *.flac > "$lista_de_musicas" && locate *.mp3 >> "$lista_de_musicas")
 }
 	
-# Progrema usado para tocar as músicas (Faz parte do pacote SoX)
-programa=play
-programa2=ffplay
-
-# Dmenu command
-#dmenu_comando=
+# Programa usado para tocar as músicas (Faz parte do pacote SoX)
+programaFLAC=play
+programaMP3=ffplay
 
 # Número de "entradas" do menu - Dmenu
-linhas=5
+linhas=6
 
 # Mostra título da música no Dmenu
-song=$(ps -q "$(pidof "$programa")" -o cmd= | sed "s/^.*\/\(.*\)$/Playing: \"\1\"/")
+song=$(ps -q "$(pidof "$programaFLAC")" -o cmd= | sed "s/^.*\/\(.*\)$/Playing: \"\1\"/")
 if [[ $song == '' ]]; then
-	song=$(ps -q "$(pidof "$programa2")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
+	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
 fi
 
 # IMPLEMENTAR: NEXT, PREVIOUS, SHUFFLE, REPEAT, PLAYLIST?
 # Melhorar forma como as opções são disponibilizadas (usar "case")
-action=$(printf 'Play\nPause\nProcurarMúsica\nEncerrarMúsica\n%s' "$song" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+action=$(printf '%s\n%s\n%s\n%s\n%s\n%s' "Play" "Pause" "ProcurarMúsica" "EncerrarMúsica" "AtualizarMúsicas" "$song" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 # Identifica corretamente o ID do processo que pertence à música
-id_flac=$(pidof $programa)
-# Podemos identificar o sucesso do comando com [[ $id_flac == '' ]]
+id_flac=$(pidof "$programaFLAC")
 if [[ $id_flac == '' ]]; then
-	id_flac=$(pidof $programa2)
+	id_flac=$(pidof "$programaMP3")
 fi
 
 abrir_arquivo() {
@@ -46,7 +43,7 @@ abrir_arquivo() {
 
 	# Busca exatamente pelo "pattern" passado
 	caminho_completo=$(locate -b "$nome_escolhido_arquivo")
-	if [[ "${nome_escolhido_arquivo}" != *".mp3" ]]; then
+	if [[ $nome_escolhido_arquivo != *.mp3 ]]; then
 		play "$caminho_completo"
 	else
 		ffplay "$caminho_completo" -loglevel quiet -nodisp -autoexit
@@ -57,15 +54,16 @@ case "$action" in
 	ProcurarMúsica) abrir_arquivo;;
 	Play) kill -cont "$id_flac";;
 	Pause) kill -stop "$id_flac";;
-	EncerrarMúsica) pkill "$programa";;
+	AtualizarMúsicas)(locate *.flac > "$lista_de_musicas" && locate *.mp3 >> "$lista_de_musicas");;
+	EncerrarMúsica) pkill "$programaFLAC";;
 esac
 
-# Comandos desatualizados
+# Comandos desatualizados (Código descartado)
 #SONG=$(ps a -o pid,command | grep /usr/bin/play | tr '\n' ' ' | sed "s/^.*\/\(.*\) [[:digit:]].*$/\1/g")
 
 
 #if [[ $? != 0 ]]; then
-#	pkill "$programa2"
+#	pkill "$programaMP3"
 #fi
 
 # Comando trocado por "sed" (MUITO mais rápido!)
@@ -95,5 +93,5 @@ esac
 #
 #if [[ $action == EncerrarMúsica ]]; then
 #	# Não importa qual programa é, pkill play mata os dois tipos de processo
-#	pkill "$programa"
+#	pkill "$programaFLAC"
 #fi

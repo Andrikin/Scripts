@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+escolha=$(printf '%s\n%s' "IniciarGravação" "EncerrarGravação" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+
+case "$escolha" in
+	IniciarGravação)ffmpeg -y -f x11grab -s $(xdpyinfo | grep dimensions | awk '{print $2}') -i :0.0 -f alsa -i default -c:v libx264 -r 30 -c:a flac "$HOME"/output_FFMPEG.mkv;;
+	EncerrarGravação)pkill ffmpeg;;
+esac
+
