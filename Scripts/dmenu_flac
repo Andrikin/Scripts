@@ -53,22 +53,12 @@ abrir_arquivo() {
 	fi
 }
 
-if [[ $action == ProcurarMúsica ]]; then
-	abrir_arquivo
-fi
-
-if [[ $action == Play ]]; then
-	kill -CONT "$id_flac"
-fi
-
-if [[ $action == Pause ]]; then
-	kill -STOP "$id_flac"
-fi
-
-if [[ $action == EncerrarMúsica ]]; then
-	# Não importa qual programa é, pkill play mata os dois tipos de processo
-	pkill "$programa"
-fi
+case "$action" in
+	ProcurarMúsica) abrir_arquivo;;
+	Play) kill -cont "$id_flac";;
+	Pause) kill -stop "$id_flac";;
+	EncerrarMúsica) pkill "$programa";;
+esac
 
 # Comandos desatualizados
 #SONG=$(ps a -o pid,command | grep /usr/bin/play | tr '\n' ' ' | sed "s/^.*\/\(.*\) [[:digit:]].*$/\1/g")
@@ -90,3 +80,20 @@ fi
 #		break
 #	fi
 #done
+
+#if [[ $action == ProcurarMúsica ]]; then
+#	abrir_arquivo
+#fi
+#
+#if [[ $action == Play ]]; then
+#	kill -CONT "$id_flac"
+#fi
+#
+#if [[ $action == Pause ]]; then
+#	kill -STOP "$id_flac"
+#fi
+#
+#if [[ $action == EncerrarMúsica ]]; then
+#	# Não importa qual programa é, pkill play mata os dois tipos de processo
+#	pkill "$programa"
+#fi
