@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Utiliza os programas SoX e FFMpeg
 # Dmenu_flac cria um menu interativo para busca e interação básica com música (e audio em geral) que estão armazanados no computador.
+# TODO - Usar índices para capturar as músicas
 
 lista_de_musicas="$HOME"/.local/share/listas_musicas.txt
 
+# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música
 [[ ! -e "$lista_de_musicas" ]] && {
 	(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas")
 }
@@ -13,7 +15,7 @@ programaFLAC=play
 programaMP3=ffplay
 
 # Número de "entradas" do menu - Dmenu
-linhas=6
+linhas=8
 
 # Mostra título da música no Dmenu
 song=$(ps -q "$(pidof "$programaFLAC")" -o cmd= | sed "s/^.*\/\(.*\)$/Playing: \"\1\"/")
@@ -21,9 +23,11 @@ if [[ $song == '' ]]; then
 	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
 fi
 
-# IMPLEMENTAR: NEXT, PREVIOUS, SHUFFLE, REPEAT, PLAYLIST?
+menu_dmenu=("Play" "Stop" "ProcurarMúsica" "TocarMúsicasPasta" "EncerrarMúsicas" "EliminarMúsica" "AtualizarLista" "$song")
+
+# IMPLEMENTAR: NEXT, PREVIOUS, SHUFFLE, REPEAT?
 # Melhorar forma como as opções são disponibilizadas (usar "case")
-action=$(printf '%s\n%s\n%s\n%s\n%s\n%s' "Play" "Pause" "ProcurarMúsica" "EncerrarMúsica" "AtualizarMúsicas" "$song" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+action=$(printf '%s\n' "${menu_dmenu[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 # Identifica corretamente o ID do processo que pertence à música
 id_flac=$(pidof "$programaFLAC")
@@ -34,12 +38,12 @@ fi
 abrir_arquivo() {
 	# Utiliza Dmenu para abrir um arquivo individualmente
 
-	# Cria um array "arquivos" passando as linhas do arquivo como variáveis
+	# Cria um array "arquivos" passando as linhas do arquivo como variáveis (comando para arquivos)
 	mapfile -t arquivos < "$lista_de_musicas"
 	# Captura os nomes das músicas para uso do Dmenu
 	nome_arquivos+=("$(sed "s/^.*\/\(.*\)$/\1/g" "$lista_de_musicas")")
 	# Captura música
-	nome_escolhido_arquivo=$(printf '%s\n' "${nome_arquivos[@]}" | dmenu $* -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+	nome_escolhido_arquivo=$(printf '%s' "${nome_arquivos[@]}" | dmenu $* -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 	# Busca exatamente pelo "pattern" passado
 	caminho_completo=$(find "$HOME"/Música/ -name "$nome_escolhido_arquivo")
@@ -50,12 +54,52 @@ abrir_arquivo() {
 	fi
 }
 
+# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
+playlist() {
+
+	# Obtendo array com os nomes das pastas
+	pastas=$(find "$HOME"/Música/ -type d -regex '^.*$' | sed "/\/$/d" | sed "s/^.*\/\(.*\)/\1/g")
+
+	# Dmenu
+	escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+
+	# Encontrar o endereço da pasta escolhida
+	caminho_completo_pasta=$(find "$HOME"/Música/ -type d -name "$escolher_playlist")
+
+	# Método bom para criar um array - Lista as músicas que estão na pasta com endereço correto
+	num=0
+	while read musica; do
+		musicas_pasta[num]="$musica"
+		((num++))
+	# Comando redirecionado que "alimentará" o while
+	done < <(find "$caminho_completo_pasta" -maxdepth 1 -type f -regex '^.*$')
+
+	# Tocar as músicas em sequencia
+	for musica in "${musicas_pasta[@]}"; do
+		if [[ $musica != *.mp3 ]]; then
+			play "$musica"
+		else
+			ffplay "$musica" -loglevel quiet -nodisp -autoexit
+		fi
+		wait $!
+	done
+}
+
 case "$action" in
-	ProcurarMúsica) abrir_arquivo;;
+	# Play
 	Play) kill -cont "$id_flac";;
-	Pause) kill -stop "$id_flac";;
-	AtualizarMúsicas)(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas");;
-	EncerrarMúsica) pkill "$programaFLAC";;
+	# Stop
+	Stop) kill -stop "$id_flac";;
+	# ProcurarMúsica
+	ProcurarMúsica) abrir_arquivo;;
+	# TocarMúsicasPasta
+	TocarMúsicasPasta) playlist;;
+	# EncerrarMúsica
+	EncerrarMúsicas) pkill -fx "bash "$HOME"/.local/bin/dmenu_flac" & pkill "$programaFLAC";;
+	# EliminarMúsica
+	EliminarMúsica) pkill "$programaFLAC";;
+	# AtualizarLista
+	AtualizarLista) (find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas");;
 esac
 
 # Comandos desatualizados (Código descartado)
@@ -87,7 +131,7 @@ esac
 #	kill -CONT "$id_flac"
 #fi
 #
-#if [[ $action == Pause ]]; then
+#if [[ $action == Stop ]]; then
 #	kill -STOP "$id_flac"
 #fi
 #
@@ -95,3 +139,23 @@ esac
 #	# Não importa qual programa é, pkill play mata os dois tipos de processo
 #	pkill "$programaFLAC"
 #fi
+
+
+#if [[ ${musicas_pasta[0]} == *.mp3 ]]; then
+#playlist_musicas_formatadas+=("$(printf '%s\n' "${musicas_pasta[@]}" | sed "s/\(^.*$\)/ffplay \1/g" | sed "s/[[:space:]]/\\\ /g" | sed "s/^ffplay\\\[[:space:]]/ffplay /g")")
+#	programa_correto="$programaMP3"
+#else
+#playlist_musicas_formatadas+=("$(printf '$s\n' "${musicas_pasta[@]}" | sed "s/\(^.*$\)/play \1/g" | sed "s/[[:space:]]/\\\ /g" | sed "s/^play\\\[[:space:]]/play /g")")
+#	programa_correto="$programaFLAC"
+#fi
+
+
+#num=0
+#while read pasta; do
+#	pastas[num]="$pasta"
+#	((num++))
+#done < <(ls -R Música | sed "/\..*$/d" | sed "/.*:$/d" | sed "/^\w*$/d")
+#echo "${pastas[@]}"
+
+
+#pastas=$(ls -R Música | sed "/\..*$/d" | sed "/.*:$/d" | sed "/^\w*$/d")
