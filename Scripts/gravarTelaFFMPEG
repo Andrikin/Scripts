@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 
-escolha=$(printf '%s\n%s' "IniciarGravação" "EncerrarGravação" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+dmenu_opcoes=("IniciarGravaçãoYoutube" "IniciarGravaçãoTela" "EncerrarGravação")
 
+stream_key=$(zenity --entry --title="StreamKey YouTube" --text="Insira StreamKey do YouTube (Ou pressione ENTER para CONTINUAR):")
+
+# variável de acordo com dmenu_opcoes
+linhas="${#dmenu_opcoes[@]}"
+
+escolha=$(printf '%s\n' "${dmenu_opcoes[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+
+# Acho que a opção "-vf" pode ser retirada
+# Codec de audio precisa ser "aac" para o output do video "flv"
 case "$escolha" in
-	IniciarGravação)ffmpeg -y -f x11grab -s $(xdpyinfo | grep dimensions | awk '{print $2}') -i :0.0 -f alsa -i default -c:v libx264 -r 30 -c:a flac "$HOME"/output_FFMPEG.mkv;;
+	#IniciarGravaçãoYoutube)ffmpeg -f alsa -i default -f x11grab -framerate 30 -video_size "$(xdpyinfo | grep dimensions | awk '{print $2}')" -i :0.0+0,0 -c:v libx264 -preset veryfast -maxrate 1984k -bufsize 3968k -vf "format=yuv420p" -g 60 -c:a aac -b:a 128k -ar 44100 -f flv rtmp://a.rtmp.youtube.com/live2/"$stream_key";;
+	IniciarGravaçãoYoutube)ffmpeg -f x11grab -s $(xdpyinfo | grep dimensions | awk '{print $2}') -i :0.0 -f alsa -i default -ar 44100 -c:v libx264 -r 30 -c:a aac -f flv rtmp://a.rtmp.youtube.com/live2/"$stream_key";;
+	IniciarGravaçãoTela)ffmpeg -y -f x11grab -s $(xdpyinfo | grep dimensions | awk '{print $2}') -i :0.0 -f alsa -i default -c:v libx264 -r 30 -c:a flac "$HOME"/output_FFMPEG.mkv;;
 	EncerrarGravação)pkill ffmpeg;;
 esac
 
