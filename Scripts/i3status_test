@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# O i3status interpreta somente em JSON
+
+green=#00FF00
+
+echo '{ "version": 1 }'
+echo '['
+echo '[]'
+while true; do
+	# Para acrescentar mais blocos de i3status: ",{'informações'}"
+	echo ",[
+	{\"name\":\"time\",\"separator\":\"false\",\"markup\":\"none\",\"full_text\":\""$(date '+%d/%b %H:%M')"\"},
+	{\"name\":\"musica\",\"separator\":\"false\",\"markup\":\"none\",\"color\":\""$green"\",\"full_text\":\""$(pgrep -a play | sed "s/.*\/\(.*\)$/Playing: \1/g")"\"}
+	]"
+	sleep 30
+done 
