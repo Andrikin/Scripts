@@ -14,16 +14,18 @@ lista_de_musicas="$HOME"/.local/share/listas_musicas.txt
 programaFLAC=play
 programaMP3=ffplay
 
-# Número de "entradas" do menu - Dmenu
-linhas=8
-
 # Mostra título da música no Dmenu
-song=$(ps -q "$(pidof "$programaFLAC")" -o cmd= | sed "s/^.*\/\(.*\)$/Playing: \"\1\"/")
-if [[ $song == '' ]]; then
-	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
-fi
+song=$(pgrep -a "$programaFLAC" | sed "s/.*\/\(.*\)$/Playing: \"\1\"/g")
+# Alterado posição dos argumentos no comando "ffplay", não sendo mais necessário esta parte do código
+#if [[ $song == '' ]]; then
+#	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
+#fi
 
 menu_dmenu=("Play" "Stop" "ProcurarMúsica" "TocarMúsicasPasta" "EncerrarMúsicas" "EliminarMúsica" "AtualizarLista" "$song")
+
+# Número de "entradas" do menu - Dmenu
+linhas="${#menu_dmenu[@]}"
+echo "$linhas"
 
 # IMPLEMENTAR: NEXT, PREVIOUS, SHUFFLE, REPEAT?
 # Melhorar forma como as opções são disponibilizadas (usar "case")
@@ -50,7 +52,7 @@ abrir_arquivo() {
 	if [[ $nome_escolhido_arquivo != *.mp3 ]]; then
 		play "$caminho_completo"
 	else
-		ffplay "$caminho_completo" -loglevel quiet -nodisp -autoexit
+		ffplay -loglevel quiet -nodisp -autoexit "$caminho_completo"
 	fi
 }
 
@@ -79,7 +81,7 @@ playlist() {
 		if [[ $musica != *.mp3 ]]; then
 			play "$musica"
 		else
-			ffplay "$musica" -loglevel quiet -nodisp -autoexit
+			ffplay -loglevel quiet -nodisp -autoexit "$musica"
 		fi
 		wait $!
 	done
