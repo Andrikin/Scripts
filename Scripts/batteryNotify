@@ -6,6 +6,7 @@ do
 	if [ $info_battery == "Discharging" ]
 	then
 		notify-send -u critical -t 10000 "Fonte está DESCONECTADA!"
-		sleep 10s
+		sleep 1
 	fi
+	sleep 1
 done
