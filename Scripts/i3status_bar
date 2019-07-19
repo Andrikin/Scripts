@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# O i3status interpreta somente em JSON
+# Para baixo consumo de CPU e RAM, usar sleep 1
+# TODO - 
+
+# Cores
+green=#00FF00
+
+# Setando cores de background e foreground
+background_color=#1D1D1D
+background_color2=#080808
+foreground_color=#FFFFFF
+
+echo '{ "version": 1 }'
+echo '['
+echo '[]'
+while true; do
+	# Para acrescentar mais blocos de i3status: ",{'informações'}"
+	echo ",["
+
+	mostrar_musica={\"name\":\"separador_musica\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color2"\",\"color\":\""$background_color"\",\"full_text\":\"\"},{\"name\":\"musica\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color"\",\"color\":\""$foreground_color"\",\"full_text\":\""$(pgrep -a play | sed "s/.*\/\(.*\)$/ \1/g")"\"}
+
+	# Exibir música quando estiver tocando
+	echo "$mostrar_musica"
+
+	separador_data=,{\"name\":\"separador_data\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color"\",\"color\":\""$background_color2"\",\"full_text\":\"\"}
+
+	echo "$separador_data"
+
+	mostrar_data=,{\"name\":\"data\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color2"\",\"full_text\":\""$(date '+%d/%b %H:%M')"\"}
+
+	# Exibir data
+	echo "$mostrar_data"
+
+	separador_volume=,{\"name\":\"separador_volume\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color2"\",\"color\":\""$background_color"\",\"full_text\":\"\"}
+
+	echo "$separador_volume"
+
+	mostrar_volume=,{\"name\":\"volume\",\"separator\":false,\"separator_block_width\":0,\"background\":\""$background_color"\",\"color\":\""$foreground_color"\",\"full_text\":\""$(pactl list sinks | grep "Volume: " | awk '{print $5}' | sed     "s/^\(.*\)$/Vol: \1/g")"\"}
+
+	# Exibir volume
+	echo "$mostrar_volume"
+
+	echo "]"
+	sleep 1
+done 
