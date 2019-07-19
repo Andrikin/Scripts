@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Utiliza os programas SoX e FFMpeg
 # Dmenu_flac cria um menu interativo para busca e interação básica com música (e audio em geral) que estão armazanados no computador.
-# TODO - Usar índices para capturar as músicas
+# TODO - next, previous, shuffle, repeat, ao iniciar uma nova música parar a que está em execução
+# Músicas que tenham o mesmo nome irão entrar em conflito, não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
 
 lista_de_musicas="$HOME"/.local/share/listas_musicas.txt
 
@@ -16,26 +17,16 @@ programaMP3=ffplay
 
 # Mostra título da música no Dmenu
 song=$(pgrep -a "$programaFLAC" | sed "s/.*\/\(.*\)$/Playing: \"\1\"/g")
-# Alterado posição dos argumentos no comando "ffplay", não sendo mais necessário esta parte do código
-#if [[ $song == '' ]]; then
-#	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
-#fi
 
 menu_dmenu=("Play" "Stop" "ProcurarMúsica" "TocarMúsicasPasta" "EncerrarMúsicas" "EliminarMúsica" "AtualizarLista" "$song")
 
 # Número de "entradas" do menu - Dmenu
 linhas="${#menu_dmenu[@]}"
-echo "$linhas"
 
-# IMPLEMENTAR: NEXT, PREVIOUS, SHUFFLE, REPEAT?
-# Melhorar forma como as opções são disponibilizadas (usar "case")
 action=$(printf '%s\n' "${menu_dmenu[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 # Identifica corretamente o ID do processo que pertence à música
-id_flac=$(pidof "$programaFLAC")
-if [[ $id_flac == '' ]]; then
-	id_flac=$(pidof "$programaMP3")
-fi
+id_flac=$(pgrep "$programaFLAC")
 
 abrir_arquivo() {
 	# Utiliza Dmenu para abrir um arquivo individualmente
@@ -107,7 +98,6 @@ esac
 # Comandos desatualizados (Código descartado)
 #SONG=$(ps a -o pid,command | grep /usr/bin/play | tr '\n' ' ' | sed "s/^.*\/\(.*\) [[:digit:]].*$/\1/g")
 
-
 #if [[ $? != 0 ]]; then
 #	pkill "$programaMP3"
 #fi
@@ -116,7 +106,6 @@ esac
 #for arquivo in "${arquivos[@]}"; do
 #	nome_arquivos+=("$(printf '%s\n' "$arquivo" | sed "s/^.*\/\(.*\)$/\1/g")")
 #done
-
 
 #for arquivo in "${arquivos[@]}"; do
 #	if [[  $nome_escolhido_arquivo == $(printf '%s\n' "$arquivo" | sed "s/^.*\/\(.*\)$/\1/g") ]]; then
@@ -142,7 +131,6 @@ esac
 #	pkill "$programaFLAC"
 #fi
 
-
 #if [[ ${musicas_pasta[0]} == *.mp3 ]]; then
 #playlist_musicas_formatadas+=("$(printf '%s\n' "${musicas_pasta[@]}" | sed "s/\(^.*$\)/ffplay \1/g" | sed "s/[[:space:]]/\\\ /g" | sed "s/^ffplay\\\[[:space:]]/ffplay /g")")
 #	programa_correto="$programaMP3"
@@ -151,7 +139,6 @@ esac
 #	programa_correto="$programaFLAC"
 #fi
 
-
 #num=0
 #while read pasta; do
 #	pastas[num]="$pasta"
@@ -159,5 +146,15 @@ esac
 #done < <(ls -R Música | sed "/\..*$/d" | sed "/.*:$/d" | sed "/^\w*$/d")
 #echo "${pastas[@]}"
 
-
 #pastas=$(ls -R Música | sed "/\..*$/d" | sed "/.*:$/d" | sed "/^\w*$/d")
+
+# Alterado posição dos argumentos no comando "ffplay", não sendo mais necessário esta parte do código
+#if [[ $song == '' ]]; then
+#	song=$(ps -q "$(pidof "$programaMP3")" -o cmd= | sed "s/^.*\/\(.*\) \-log.*$/Playing \"\1\"/")
+#fi
+
+# Troca de comandos "pidof" para "pgrep"
+#id_flac=$(pidof "$programaFLAC")
+#if [[ $id_flac == '' ]]; then
+#	id_flac=$(pidof "$programaMP3")
+#fi
