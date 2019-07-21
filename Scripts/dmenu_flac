@@ -7,6 +7,7 @@
 # Arquivos usados
 lista_de_musicas="$HOME"/.local/share/dmenu_flac/listas_musicas.txt
 arquivo_indice="$HOME"/.local/share/dmenu_flac/indice_playlist.txt
+arquivo_modulo="$HOME"/.local/share/dmenu_flac/modulo.txt
 
 update_music() {
 	(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas")
@@ -28,7 +29,11 @@ song=$(pgrep -a "$programaFLAC" | sed "s/.*\/\(.*\)$/Playing: \"\1\"/g")
 if [[ $(pgrep "$programaFLAC") == '' ]]; then
 	menu_dmenu=("ProcurarMúsica" "TocarMúsicasPasta" "AtualizarLista")
 else
-	menu_dmenu=("Play" "Stop" "EncerrarPlaylist" "ProcurarMúsica" "TocarMúsicasPasta" "Next/EliminarMúsica" "Previous" "AtualizarLista" "$song")
+	# Dmenu's diferentes para "playlist" e música solo
+	case "$(cat "$arquivo_modulo")" in
+		1)menu_dmenu=("Play" "Stop" "Next/EliminarMúsica" "$song");;
+		*)menu_dmenu=("Play" "Stop" "Next/EliminarMúsica" "Previous" "EncerrarPlaylist" "$song");;
+	esac
 fi
 
 # Número de "entradas" do menu - Dmenu
@@ -54,6 +59,9 @@ play_music() {
 abrir_arquivo() {
 	# Utiliza Dmenu para abrir um arquivo individualmente
 
+	# Registrando módulo
+	printf '%s' "1" > "$arquivo_modulo"
+
 	# Cria um array "arquivos" passando as linhas do arquivo como variáveis (comando para arquivos)
 	mapfile -t arquivos < "$lista_de_musicas"
 	# Captura os nomes das músicas para uso do Dmenu
@@ -66,8 +74,11 @@ abrir_arquivo() {
 	play_music "$caminho_completo"
 }
 
-# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
 playlist() {
+	# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
+
+	# Registrando módulo
+	printf '%s' "2" > "$arquivo_modulo"
 
 	# Obtendo array com os nomes das pastas
 	local pastas=$(find "$HOME"/Música/ -type d -regex '^.*$' | sed "/\/$/d" | sed "s/^.*\/\(.*\)/\1/g")
