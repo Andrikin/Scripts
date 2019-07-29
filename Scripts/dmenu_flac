@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Utiliza os programas SoX e FFMpeg
-# Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (e audio em gerali).
-# TODO - shuffle, repeat, ao iniciar uma nova música parar a que está em execução.
+# Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta Música/).
+# TODO - shuffle, repeat. Passar os arquivos para formato ogg!
 # Músicas que tenham o mesmo nome irão entrar em conflito (comando "find"), não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
+# Utilizando KillSleep para atualizar o statusbar - DWM
 
 # Arquivos usados
 lista_de_musicas="$HOME"/.local/share/dmenu_flac/listas_musicas.txt
@@ -10,7 +11,7 @@ arquivo_indice="$HOME"/.local/share/dmenu_flac/indice_playlist.txt
 arquivo_modulo="$HOME"/.local/share/dmenu_flac/modulo.txt
 
 update_music() {
-	(find "$HOME"/Música/ -name *.flac > "$lista_de_musicas" && find "$HOME"/Música/ -name *.mp3 >> "$lista_de_musicas")
+	(du -a "$HOME"/Música/ | cut -f2 | grep "flac\|mp3\|ogg$" > "$lista_de_musicas")
 }
 
 # Criando arquivo que conterá todas as músicas da pasta /home/andre/Música
@@ -29,7 +30,7 @@ song=$(pgrep -a "$programaFLAC" | sed "s/.*\/\(.*\)$/Playing: \"\1\"/g")
 if [[ $(pgrep "$programaFLAC") == '' ]]; then
 	menu_dmenu=("ProcurarMúsica" "TocarMúsicasPasta" "AtualizarLista")
 else
-	# Dmenu's diferentes para "playlist" e música solo
+	# Dmenu's diferentes para "playlist" e música "solo"
 	case "$(cat "$arquivo_modulo")" in
 		1)menu_dmenu=("Play" "Stop" "Next/EliminarMúsica" "$song");;
 		*)menu_dmenu=("Play" "Stop" "Next/EliminarMúsica" "Previous" "EncerrarPlaylist" "$song");;
@@ -43,12 +44,18 @@ else
 	linhas="${#menu_dmenu[@]}"
 fi
 
-action=$(printf '%s\n' "${menu_dmenu[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+action=$(printf '%s\n' "${menu_dmenu[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 # Identifica corretamente o ID do processo que pertence à música
 id_flac=$(pgrep "$programaFLAC")
 
 play_music() {
+	if [[ $id_flac != '' ]]; then
+		kill "$id_flac"
+	fi
+	sleep 1
+	# Dar update no statusbar
+	KillSleep
 	if [[ $1 != *.mp3 ]]; then
 		play "$1"
 	else
@@ -67,11 +74,13 @@ abrir_arquivo() {
 	# Captura os nomes das músicas para uso do Dmenu
 	local nome_arquivos+=("$(sed "s/^.*\/\(.*\)$/\1/g" "$lista_de_musicas")")
 	# Captura música
-	 local nome_escolhido_arquivo=$(printf '%s' "${nome_arquivos[@]}" | dmenu $* -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+	 local nome_escolhido_arquivo=$(printf '%s' "${nome_arquivos[@]}" | dmenu -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
 
 	# Busca exatamente pelo "pattern" passado
 	local caminho_completo=$(find "$HOME"/Música/ -name "$nome_escolhido_arquivo")
 	play_music "$caminho_completo"
+	sleep 1
+	KillSleep
 }
 
 playlist() {
@@ -81,10 +90,12 @@ playlist() {
 	printf '%s' "2" > "$arquivo_modulo"
 
 	# Obtendo array com os nomes das pastas
-	local pastas=$(find "$HOME"/Música/ -type d -regex '^.*$' | sed "/\/$/d" | sed "s/^.*\/\(.*\)/\1/g")
+	local pastas=$(du -a "$HOME"/Música/ | cut -f2 | grep -v "\/.*\..*$" | sed "/\/$/d" | sed "s/.*\/\(.*\)$/\1/g")
 
 	# Dmenu
-	local escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu $* -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+	local escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
+
+	notify-send -t 3000 "DMENU_FLAC" "Tocando Músicas da pasta: $escolher_playlist"
 
 	# Encontrar o endereço da pasta escolhida
 	local caminho_completo_pasta=$(find "$HOME"/Música/ -type d -name "$escolher_playlist")
@@ -93,7 +104,7 @@ playlist() {
 	local num=0
 	while read musica; do
 		case ${musica#*.} in
-			flac|mp3)musicas_pasta[num]="$musica"
+			ogg|flac|mp3)musicas_pasta[num]="$musica"
 			((num++));;
 		esac
 	# Comando redirecionado que "alimentará" o while
@@ -107,16 +118,22 @@ playlist() {
 		# Atualiza indice no "arquivo_indice"
 		printf '%s' "$(("$(cat "$arquivo_indice")" + 1))" > "$arquivo_indice"
 	done
+	sleep 1
+	KillSleep
 }
 
 next_playlist() {
 	pkill "$programaFLAC"
+	sleep 1
+	KillSleep
 }
 
 previous_playlist() {
 	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
 	printf '%s' "$(("$(cat "$arquivo_indice")" - 2))" > "$arquivo_indice"
 	pkill "$programaFLAC"
+	sleep 1
+	KillSleep
 }
 
 case "$action" in
@@ -124,12 +141,12 @@ case "$action" in
 	Play) kill -cont "$id_flac";;
 	# Stop
 	Stop) kill -stop "$id_flac";;
-	# ProcurarMúsica
-	ProcurarMúsica) abrir_arquivo;;
+	# ProcurarMúsica - pm (Atalho)
+	pm|ProcurarMúsica) abrir_arquivo;;
 	# TocarMúsicasPasta
 	TocarMúsicasPasta) playlist;;
 	# EncerrarMúsica
-	EncerrarPlaylist) pkill -fx "bash "$HOME"/.local/bin/dmenu_flac" & pkill "$programaFLAC";;
+	EncerrarPlaylist) pkill -fx "bash "$HOME"/.local/bin/dmenu_flac" & pkill "$programaFLAC" & KillSleep;;
 	# EliminarMúsica
 	#EliminarMúsica) next_playlist;;
 	# Next/EliminarMúsica
