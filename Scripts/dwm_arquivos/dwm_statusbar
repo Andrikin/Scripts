@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Estabelecer comandos de reset em outros scripts, para dar update no statusbar - FEITO!
+
+separador='  '
+
+music_playing() {
+	if [[ $(pgrep play) == '' ]]; then
+		mostrar_musica='NO MUSIC!'
+	else
+		mostrar_musica=$(pgrep -a play | sed "s/.*\/\(.*\)$/ \1/g")
+	fi
+}
+
+date_hour() {
+	mostrar_data=$(date '+%d/%m %H:%M')
+}
+
+volume_system() {
+	mostrar_volume=$(pactl list sinks | grep "Volume: " | awk '{print $5}' | sed "s/^\(.*\)$/Vol: \1/g")
+}
+
+while true; do
+	date_hour
+	music_playing
+	volume_system
+	xsetroot -name "$separador$mostrar_musica$separador$mostrar_volume$separador$mostrar_data"
+	sleep 1m
+done

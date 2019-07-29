@@ -12,15 +12,14 @@
 #nome=`echo "$1" | tr "[" "-" | tr "]" "-"`
 #mv "$1" "$nome"
 
-srt=${1/${1:(-4)}/.srt}
-char_code=`file -bi "$srt"`
-code=${char_code#*=}
+srt="${1/${1:(-4)}/.srt}"
+char_code=$(file -bi "$srt")
+code="${char_code#*=}"
 
-if [[ "$char_code" != *"=utf-8" ]]
-   then
+if [[ $char_code != *utf-8 ]]; then
    iconv -f "$code" -t utf-8 "$srt" -o temp.srt
    rm "$srt"
    mv temp.srt "$srt"
 fi
 
-ffplay -i "$1" -vf subtitles="$srt"
+ffplay -i "$1" -vf subtitles="$srt" -autoexit

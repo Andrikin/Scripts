@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# O objetivo deste script é atualizar as informações no statusbar, matando o comando sleep
+
+kill "$(pstree -lp "$(pgrep -a bash | grep dwm_statusbar | awk '{print $1}')" | sed "s/.*sleep(\(.*\)).*$/\1/g")"
