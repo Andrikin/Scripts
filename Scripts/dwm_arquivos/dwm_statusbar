@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
 # Estabelecer comandos de reset em outros scripts, para dar update no statusbar - FEITO!
+# TODO - 
 
-separador='  '
+separador=' '
 
 music_playing() {
 	if [[ $(pgrep play) == '' ]]; then
-		mostrar_musica='NO MUSIC!'
+		mostrar_musica='NO MUSIC! '
 	else
-		mostrar_musica=$(pgrep -a play | sed "s/.*\/\(.*\)$/ \1/g")
+		mostrar_musica=$(pgrep -a play | sed "s/.*\/\(.*\)$/ \1 /g")
 	fi
 }
 
 date_hour() {
-	mostrar_data=$(date '+%d/%m %H:%M')
+	mostrar_data=$(date '+%d/%b %H:%M ')
 }
 
 volume_system() {
-	mostrar_volume=$(pactl list sinks | grep "Volume: " | awk '{print $5}' | sed "s/^\(.*\)$/Vol: \1/g")
+	mostrar_volume=$(pactl list sinks | grep "Volume: " | awk '{print $5}' | sed "s/^\(.*\)$/Vol: \1 /g")
 }
+
+# Comando é lento quando atualiza status
+#wifi_display() {
+#	mostrar_wifi="WiFi [off]"
+#	if [[ $(nmcli dev | grep wifi | awk '{print $3}') != desconectado ]]; then
+#		mostrar_wifi="WiFi ["$(nmcli connection show --active | grep wifi | awk '{print $1}')"]"
+#	fi
+#}
 
 while true; do
 	date_hour
 	music_playing
 	volume_system
-	xsetroot -name "$separador$mostrar_musica$separador$mostrar_volume$separador$mostrar_data"
+#	wifi_display
+	xsetroot -name "$separador$mostrar_musica$separador$mostrar_volume$separador$mostrar_data$separador"
 	sleep 1m
 done
