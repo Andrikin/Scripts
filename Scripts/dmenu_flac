@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Utiliza os programas SoX e FFMpeg
 # Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta Música/).
-# TODO - shuffle, repeat. Passar os arquivos para formato ogg!
+# TODO - shuffle, repeat.
 # Músicas que tenham o mesmo nome irão entrar em conflito (comando "find"), não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
-# Utilizando KillSleep para atualizar o statusbar - DWM
+# Utilizando script KillSleep para atualizar o statusbar - DWM
 
 # Arquivos usados
 lista_de_musicas="$HOME"/.local/share/dmenu_flac/listas_musicas.txt
 arquivo_indice="$HOME"/.local/share/dmenu_flac/indice_playlist.txt
 arquivo_modulo="$HOME"/.local/share/dmenu_flac/modulo.txt
+temp="$HOME"/.local/share/dmenu_flac/temp.txt
 
 update_music() {
-	(du -a "$HOME"/Música/ | cut -f2 | grep "flac\|mp3\|ogg$" > "$lista_de_musicas")
+	(du -a "$HOME"/Música/ | cut -f2 | grep ".flac\|.mp3\|.ogg" > "$temp") &&
+	(sort -d "$(echo "$temp")" > "$lista_de_musicas")
+
 }
 
 # Criando arquivo que conterá todas as músicas da pasta /home/andre/Música

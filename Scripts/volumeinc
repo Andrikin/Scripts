@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Script para aumentar volume atualizando o statusbar
+
+pactl -- set-sink-volume "$(pactl list | grep "Destino #" | sed "s/^.*\([[:digit:]]\)$/\1/g")" +1% & KillSleep &
+

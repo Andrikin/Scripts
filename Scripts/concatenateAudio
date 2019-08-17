@@ -2,7 +2,7 @@
 #Script para juntar arquivos de audio em um único arquivo
 #Uso: mergeAudioLinux arg1 arg2 ...
 #Script colocado em .local/bin/ para melhor uso
-#Script depreciado. Programa SoX produz o mesmo resultado.
+#Programa SoX produz o mesmo resultado.
 #Possível nova utilidade caso SoX não funcione por diferença de samplerate dos arquivos
 
 erro_abortar(){
@@ -35,32 +35,32 @@ while [[ $resposta != [01] ]]
    esac
 done
 
-#Colocar aqui um método para verificar se os arquivos são flac e modificá-los, caso necessário
+#Colocar aqui um método para verificar se os arquivos são.ogg e modificá-los, caso necessário
 echo "Verificando arquivos..."
 for arq in "$@"
    do
-   if [[ "${arq}" != *".flac" ]]
+   if [[ "${arq}" != *".ogg" ]]
       then
-      ffmpeg -i "$arq" "${arq%.*}".flac -loglevel quiet
-      arq_renomeados[$num]="${arq%.*}.flac"
-      num=$(($num+1))
+      ffmpeg -i "$arq" "${arq%.*}".ogg -loglevel quiet
+      arq_renomeados[$num]="${arq%.*}.ogg"
+	  ((num++))
       rm "$arq"
       else
       arq_renomeados[$num]="$arq"
-      num=$(($num+1))
+	  ((num++))
    fi
 done
 clear
 
 echo "Juntando arquivos...";
 #Ao usar '@' estaremos pegando cada array individualmente. Diferente de usar '*', que será substituído por qualquer valor possível de índice do array
-cat "${arq_renomeados[@]}" > temp.flac;
+cat "${arq_renomeados[@]}" > temp.ogg;
 clear
 echo "Finalizando arquivo...";
-ffmpeg -i temp.flac "$audio".flac -loglevel quiet;
+ffmpeg -i temp.ogg "$audio".ogg -loglevel quiet;
 clear
 echo "Removendo arquivos..."
-rm temp.flac;
+rm temp.ogg;
 #Remove os arquivos originais
 if [ $resposta = 0 ] 
    then
