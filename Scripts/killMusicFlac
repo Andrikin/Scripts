@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# A ideia é obter o pid da música e usar o comando kill 
+
+# Comando antigo
+#kill $(ps a -o pid,command | grep /usr/bin/play | tr '\n' ' ' | sed "s/^\(\<[[:digit:]]*\>\) .*$/\1/")
+
+# Novo comando
+#kill $(pgrep play)
+
+# Comando melhor ainda
+pkill play

@@ -1,0 +1,29 @@
+#!/bin/bash
+#Script para abrir arquivos de vídeo com subtítulos no ffmpeg
+
+#${string:position:length} - Extração de strings a partir de position, podendo dar a quantidade de caracteres que serão extraídos por length. Sempre será da esquerda para direita a não ser que: ${string:(-number)} ou ${string: -number}
+
+#Método para verificar a codificação do arquivo .srt e converter para UTF-8
+
+#----Arrumar: Buscar por "[]" em todos os chars da string (conflito com o nome do arquivo, basta remover estas strings do nome)----
+
+#Removendo char "[]" do nome do arquivo para evitar conflito com os comandos
+
+#nome=`echo "$1" | tr "[" "-" | tr "]" "-"`
+#mv "$1" "$nome"
+
+srt="${1/${1:(-4)}/.srt}"
+char_code=$(file -bi "$srt")
+code="${char_code#*=}"
+
+if [[ $char_code != *utf-8 ]]; then
+   iconv -f "$code" -t utf-8 "$srt" -o temp.srt
+   rm "$srt"
+   mv temp.srt "$srt"
+fi
+# Verificar se arquivo srt existe, caso contrário, rodar o vídeo sem
+if [[ -e $srt ]]; then
+	ffplay -vf subtitles="$srt" -autoexit -i "$1" 
+else
+	ffplay -autoexit -i "$1"
+fi
