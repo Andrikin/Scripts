@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#Script para download de videos do youtube
+
+link=$(zenity --entry --title="Youtube-Video" --text="Insira o link para download do video")
+
+youtube-dl --hls-prefer-ffmpeg -q --restrict-filenames -f flv -o "$HOME/Vídeos/%(title)s.flv" "$link"  
+
+notify-send --expire-time=3250 "Youtube-Video" "Vídeo concluído com sucesso"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio do YouTube e converter esse arquivo para o formato FLAC
 
 erro_abortar(){
@@ -26,7 +26,11 @@ arquivo="$(youtube-dl --get-filename "$link")"
 #(#)PREFIXO; (%)SUFIXO; comandos que indicam o sentido da operação, o caracter será o último a ser removido; seguindo o sentido da operação, colocar (*) para remover o resto do texto
 arquivo="${arquivo%.*}"
 #Armazena somente a parte do link que será removido do nome do arquivo convertido em flac
-tagyoutube="${link#*=}"
+if [[ $link == *youtu.be/* ]];then
+	tagyoutube="${link##*/}"
+elif [[ $link == *youtube.com/watch?v=* ]];then
+	tagyoutube="${link#*=}"
+fi
 nome_final="${arquivo%"-$tagyoutube"}"
 
 #Comando principal: fará o download e a conversão para o formato .flac

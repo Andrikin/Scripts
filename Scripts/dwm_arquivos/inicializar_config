@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO - Mudar imagem background
 
 numlockx on &
 #Executando funções ao iniciar i3 (Mouse)
@@ -7,4 +8,4 @@ xinput set-prop 12 288 1 &
 xinput set-prop 12 300 0 &
 xinput set-prop 12 295 1.0 &
 #Executando funções ao iniciar i3 (Wallpaper)
-feh --bg-fill /home/andre/Imagens/John\ Wick.jpg &
+feh --bg-scale /home/andre/Imagens/Tuor\ and\ Ulmo.jpg &
