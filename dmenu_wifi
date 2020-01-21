@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# TODO - De alguma forma não está conectando...
+
+wifi_atual="off"
+wifi_status=$(nmcli dev | grep wifi | awk '{print $3}')
+if [[ $wifi_status != desconectado ]]; then
+	wifi_atual=$(nmcli connection show --active | grep wifi | awk '{print $1}')
+fi
+
+escolher_wifi=$(nmcli device wifi list | dmenu -p "Escolha um Wifi: [$wifi_atual]" -b -i -f -l 5 -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808" | awk '{print $2}')
+
+if [[ $escolher_wifi != '' ]]; then
+	nmcli device wifi connect "$escolher_wifi" password "$(zenity --entry --title="Dmenu-WiFi" --text="Digite a senha do Wi-Fi:")" 
+fi

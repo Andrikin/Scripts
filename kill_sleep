@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# O objetivo deste script é atualizar as informações no statusbar, matando o comando "sleep"
+
+# Este comando busca exatamente o sleep do script dwm_statusbar
+#kill "$(pstree -lp "$(pgrep -a bash | grep dwm_statusbar | awk '{print $1}')" | sed "s/.*sleep(\(.*\)).*$/\1/g")"
+
+# Tempo de execução do comando acima:
+
+#real    0m0,051s
+#user    0m0,015s
+#sys     0m0,041s
+
+
+# Verificar se comando é mais eficiente:
+# Este comando "mata" todos os comandos sleep em execução, inclusive do script que monitora o status da bateria
+pkill -fx "sleep 1m"
+
+# Tempo de execução do comando acima:
+
+#real    0m0,016s
+#user    0m0,004s
+#sys     0m0,011s
+

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#Script para download de videos do youtube
+#TODO - 
+
+link=$(zenity --entry --title="Youtube-Video" --text="Insira o link para download do video")
+
+if [[ $link == *youtu.be/* ]];then
+	id_link="${link##*/}"
+elif [[ $link == *youtube.com/watch?v* ]];then
+	id_link="${link#*=}"
+fi
+
+nome_arquivo="$(youtube-dl --get-title "$link")"
+
+youtube-dl --hls-prefer-ffmpeg -q --restrict-filenames -f "[height=720]" -o "$HOME/Videos/%(id)s.%(ext)s" "$link"  
+
+nome_atual_arquivo=$(ls "$HOME/Videos" | grep "$id_link")
+
+if [[ -e $HOME/Videos/$nome_atual_arquivo ]]; then
+	notify-send --expire-time=3250 "Youtube-Video" "Vídeo $nome_arquivo concluído com sucesso"
+	# Verificar comando que renomeia o arquivo corretamente
+	mv "$HOME/Videos/$nome_atual_arquivo" "$HOME/Videos/$nome_arquivo.${nome_atual_arquivo#*.}"
+else
+	notify-send --expire-time=3250 -u critical "Youtube-Video" "Vídeo $nome_substituicao NÃO concluído com sucesso"
+fi
