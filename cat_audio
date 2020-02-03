@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Script para juntar arquivos de audio em um único arquivo
+# TODO - 
+
+sucesso(){
+	notify-send --expire-time=3250 "Arquivo: $audio" "Criado com sucesso!"
+}
+
+erro_abortar(){
+	notify-send --expire-time=3250 "Arquivo: $audio" "Falhou ao ser criado..."
+}
+
+trap erro_abortar EXIT
+set -e
+
+IFS="|"
+
+nome_arquivo_final="$HOME/$(zenity --entry --text="Digite o nome do arquivo final:").ogg"
+
+arquivo_temp="$HOME/cat_audio.temp"
+
+remover_arquivos_orig=$(zenity --entry --text="Deseja remover os arquivos originais? [y/n]")
+
+nome_arquivos=($(zenity --multiple --file-selection --filename="$HOME/Música/"))
+
+cat "${nome_arquivos[@]}" > "$arquivo_temp"
+
+ffmpeg -i "$arquivo_temp" "$nome_arquivo_final" -loglevel quiet
+
+# Remove os arquivos originais
+if [[ -e $nome_arquivo_final ]] && [[ $remover_arquivos_orig == [yY]es || [yY] ]];then
+	rm "${nome_arquivos[@]}"
+	rm "$arquivo_temp"
+else
+	rm "$arquivo_temp"
+fi
+
+trap sucesso EXIT

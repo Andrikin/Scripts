@@ -1,5 +1,5 @@
 #!/bin/bash
-#Script para abrir arquivos de vídeo com subtítulos no ffmpeg
+# Script para abrir arquivos de vídeo com subtítulos usando ffmpeg
 # TODO - Criar um script para fazer download automático de subtitles
 
 #${string:position:length} - Extração de strings a partir de position, podendo dar a quantidade de caracteres que serão extraídos por length. Sempre será da esquerda para direita a não ser que: ${string:(-number)} ou ${string: -number}
@@ -7,10 +7,10 @@
 # Atualiza o status bar
 atualizar_statusbar(){
 	sleep 1
-	pkill -fx "sleep 1m"
+	pkill -fx "sleep 1m" &
 }
 
-arquivo_srt="${1/${1:(-3)}/srt}"
+arquivo_srt="${1/${1##*.}/srt}"
 
 # Verificar se arquivo srt existe, caso contrário, rodar o vídeo sem
 if [[ ! -e $arquivo_srt ]]; then
@@ -18,7 +18,7 @@ if [[ ! -e $arquivo_srt ]]; then
 	ffplay -autoexit -i "$1"
 else
 	# Verifica a codificação do arquivo .srt e converter para UTF-8
-	char_code=$(chardet3 "$arquivo_srt" | sed "s/^.*: \(.[^\ ]*\) .*$/\1/g")
+	local char_code=$(chardet3 "$arquivo_srt" | sed "s/^.*: \(.[^\ ]*\) .*$/\1/g")
 
 	if [[ $char_code != utf-8 ]]; then
 	   iconv -f "$char_code" -t UTF-8 "$arquivo_srt" -o temp.srt
@@ -30,5 +30,4 @@ else
 	atualizar_statusbar
 	ffplay -vf subtitles="$arquivo_srt" -autoexit -i "$1" 
 fi
-sleep 1
 atualizar_statusbar

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+nome_arquivo=$(zenity --entry --text="Digite o nome do script que você deseja criar:")
+
+printf '%s' "#!/usr/bin/env bash" > "$HOME/Scripts/$nome_arquivo"

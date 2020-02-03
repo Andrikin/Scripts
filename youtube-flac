@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio do YouTube e converter esse nome_arquivo para o formato FLAC
+# Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio do YouTube e converter esse nome_arquivo para o formato OGG
 
 erro_abortar(){
-   notify-send -u critical --expire-time=3250 "YouTube-Flac" "Áudio: $nome_final - Falhou..."
+   notify-send -u critical --expire-time=3250 "YouTube-Flac" "Áudio: $nome_arquivo - Falhou..."
 }
 
 sucesso(){
@@ -13,21 +13,20 @@ trap erro_abortar EXIT
 
 set -e
 
-link="$(zenity --entry --title="YouTube-FLAC" --text="Para download e conversão de áudio do YouTube, insira o link")"
+# Adicionar mais caracteres que não são interpretados pelo comando "mv"
+caracter_proibido='\/'
 
-nome_arquivo="$(youtube-dl --get-title "$link")"
+link=$(zenity --entry --title="YouTube-FLAC" --text="Para download e conversão de áudio do YouTube, insira o link")
 
-if [[ $link == *youtu.be/* ]];then
-	tag_youtube="${link##*/}"
-elif [[ $link == *youtube.com/watch?v=* ]];then
-	tag_youtube="${link#*=}"
-fi
+nome_arquivo=$(youtube-dl --get-title "$link")
 
-youtube-dl -q -f bestaudio -o "$HOME/Música/AudiosYouTube/%(id)s.%(ext)s" "$link"
+id_link=$(youtube-dl --get-id "$link")
 
-nome_atual_arquivo=$(ls "$HOME/Música/AudiosYouTube" | grep "$tag_youtube")
+youtube-dl -q --no-playlist --youtube-skip-dash-manifest -f bestaudio -o "$HOME/Música/AudiosYouTube/%(id)s.%(ext)s" "$link"
 
-ffmpeg -i "$HOME/Música/AudiosYouTube/$nome_atual_arquivo" "$HOME/Música/AudiosYouTube/$nome_arquivo.ogg" -loglevel quiet
+nome_atual_arquivo=$(ls "$HOME/Música/AudiosYouTube" | grep --color=never "$id_link")
+
+ffmpeg -i "$HOME/Música/AudiosYouTube/$nome_atual_arquivo" "$HOME/Música/AudiosYouTube/${nome_arquivo//["$caracter_proibido"]/}.ogg" -loglevel quiet
 
 if [[ -e $HOME/Música/AudiosYouTube/$nome_atual_arquivo ]]; then
    rm "$HOME/Música/AudiosYouTube/$nome_atual_arquivo"
