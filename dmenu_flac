@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO - Modo: Shuffle, repeat
+# TODO - Modo: Shuffle (comando "shuf"), repeat
 # Utiliza os programas SoX e FFMpeg, fonte Google Source Code Pro Medium
 # Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
 # Músicas que tenham o mesmo nome irão entrar em conflito (comando "find"), não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
@@ -13,7 +13,6 @@ arq_lista_de_musicas="$DMENU_PASTA/lista_de_musicas_completa.dmenu"
 arq_indice="$DMENU_PASTA/indice_playlist.dmenu"
 arq_modulo="$DMENU_PASTA/modulo.dmenu"
 arq_pastas_musicas="$DMENU_PASTA/pastas_de_musicas.dmenu"
-lista_musicas_temp="$DMENU_PASTA/lista_musicas_temp.dmenu"
 
 # Programa usado para tocar as músicas (Faz parte do pacote SoX)
 programaFLAC=play
@@ -34,14 +33,10 @@ FONT_DMENU_BACKGROUND=#080808
 
 # Função que atualiza o arquivo das músicas
 atualizar_listas_de_musicas() {
-	{
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg" > "$lista_musicas_temp" &&
+	sort -R < <(du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg") > "$arq_lista_de_musicas" &&
 	# Captura todas as pastas dentro da pasta ~/Música/
-	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never -v "\/.*\..*$" | sed "/\/$/d" > "$arq_pastas_musicas" &&
-	sort -R "$lista_musicas_temp" > "$arq_lista_de_musicas" &&
-	rm "$lista_musicas_temp";
-	}
+	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never -v "\/.*\..*$" | sed "/\/$/d" > "$arq_pastas_musicas"
 }
 
 atualizar_statusbar(){
@@ -63,54 +58,39 @@ player() {
 
 tocar_musica() {
 	# Utiliza Dmenu para abrir um arquivo individualmente
-
 	# Registrando módulo
-	printf '1' > "$arq_modulo"
-
+	echo '1' > "$arq_modulo"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
-	IFS=$'\r'
-
-	# Captura os nomes das músicas para uso do Dmenu
-	local todas_musicas=($(sed "s/^.*\/\(.*\)$/\1/g" "$arq_lista_de_musicas"))
-
+	IFS=$'\n'
+	# Captura os nomes das músicas para uso do Dmenu, podemos usar "|" para não precisar "escapar" "/"
+	local todas_musicas=($(sed "s|^.*/\(.*\)$|\1|g" "$arq_lista_de_musicas"))
 	# Captura música
-	local musica_escolhida=$(printf '%s' "${todas_musicas[@]}" | dmenu -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
-
+	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]}" | dmenu -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
 	# Busca exatamente pela full path da musica
 	local musica=$(grep --color=never "$musica_escolhida$" "$arq_lista_de_musicas")
-
 	player "$musica"
 	atualizar_statusbar
 }
 
 tocar_playlist() {
 	# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
-
 	# Registrando módulo
-	printf '2' > "$arq_modulo"
-
+	echo '2' > "$arq_modulo"
 	IFS=$'\n'
-
 	# Obtendo array com os nomes das pastas
-	local pastas=($(sed "s/.*\/\(.*\)$/\1/g" "$arq_pastas_musicas"))
-
+	local pastas=($(sed "s|.*/\(.*\)$|\1|g" "$arq_pastas_musicas"))
 	# Dmenu
 	local escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
-
 	[[ $escolher_playlist != '' ]] && notify-send -t 3250 "DMENU_FLAC" "Tocando: $escolher_playlist"
-
 	# Encontrar o endereço da pasta escolhida
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$arq_pastas_musicas")
-
 	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null))
-
 	# Inicia o índice do array com o valor "0"
-	printf '0' > "$arq_indice"
-
+	echo '0' > "$arq_indice"
 	while [[ $(< "$arq_indice") -lt ${#musicas_da_pasta[@]} ]]; do
 		player "${musicas_da_pasta["$(< "$arq_indice")"]}"
 		# Atualiza indice no "arq_indice"
-		printf "$(($(< "$arq_indice") + 1))" > "$arq_indice"
+		echo "$(($(< "$arq_indice") + 1))" > "$arq_indice"
 	done
 	atualizar_statusbar
 }
@@ -123,7 +103,7 @@ proxima_musica() {
 musica_anterior() {
 	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
 	# printf "formato" aceita somente números naturais
-	printf '%s' "$(($(< "$arq_indice") - 2))" > "$arq_indice"
+	echo "$(($(< "$arq_indice") - 2))" > "$arq_indice"
 	proxima_musica
 }
 
@@ -136,7 +116,7 @@ eliminar_playlist(){
 [[ ! -e "$arq_lista_de_musicas" ]] && atualizar_listas_de_musicas
 	
 # Mostra título da música no Dmenu
-musica_tocando=$(pgrep -a "$programaFLAC" | sed "s/.*\/\(.*\)$/Playing: \"\1\"/g")
+musica_tocando=$(pgrep -a "$programaFLAC" | sed "s|.*/\(.*\)$|Playing: \"\1\"|g")
 
 # Identifica corretamente o ID do processo que pertence à música
 id_musica=$(pgrep -f "ffplay|play")

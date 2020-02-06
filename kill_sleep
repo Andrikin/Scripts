@@ -13,6 +13,7 @@
 
 # Verificar se comando é mais eficiente:
 # Este comando "mata" todos os comandos "sleep" em execução, inclusive do script que monitora o status da bateria
+#sleep 1
 pkill -fx "sleep 1m" &
 
 # Tempo de execução do comando acima:

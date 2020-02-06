@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Script player para arquivos de audio
+
+id_musica=$(pgrep -f "ffplay|play")
+
+[[ "$id_musica" != '' ]] && kill "$id_musica"
+
+# Dar update no statusbar
+sleep 1
+kill_sleep
+if [[ $1 != *.mp3 ]]; then
+play "$1"
+else
+ffplay -loglevel quiet -nodisp -autoexit "$1"
+fi
+
+sleep 1
+kill_sleep

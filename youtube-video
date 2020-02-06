@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #Script para download de videos do youtube
-#TODO - --hls-prefer-ffmpeg 
+#TODO -
 
 link=$(zenity --entry --title="Youtube-Video" --text="Insira o link para download do video")
 
