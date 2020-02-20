@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# TODO - Fazer com que o script não rode caso tenha mesmo script já rodando
+
+separador=''
+
+music_playing() {
+	mostrar_musica=''
+	[[ $(pgrep play) != '' ]] && mostrar_musica="$separador $(pgrep -a play | sed "s|^.*/\(.*\)$| \1|g") "
+}
+
+date_hour() {
+	mostrar_data="$separador $(date '+%d/%b %H:%M') $separador"
+}
+
+volume_system() {
+	mostrar_volume="$separador Vol: $(pactl list sinks | grep --color=never "Volume: " | cut -d' ' -f6) "
+}
+
+hd_usage(){
+	mostrar_uso_hd="$separador HD: $(df -h --output=avail | sed -n "4s/\ //gp") "
+}
+
+while true; do
+	music_playing
+	volume_system
+	date_hour
+	hd_usage
+	xsetroot -name "$mostrar_musica$mostrar_volume$mostrar_uso_hd$mostrar_data"
+	sleep 1m
+done &

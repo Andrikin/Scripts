@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO - Modo: Shuffle (comando "shuf"), repeat
+# TODO - Modo: Shuffle, repeat
 # Utiliza os programas SoX e FFMpeg, fonte Google Source Code Pro Medium
 # Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
 # Músicas que tenham o mesmo nome irão entrar em conflito (comando "find"), não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
@@ -9,14 +9,14 @@ DMENU_PASTA="$HOME/.local/share/dmenu_flac"
 MUSICAS_PASTA="$HOME/Música/"
 
 # Arquivos usados
-arq_lista_de_musicas="$DMENU_PASTA/lista_de_musicas_completa.dmenu"
-arq_indice="$DMENU_PASTA/indice_playlist.dmenu"
-arq_modulo="$DMENU_PASTA/modulo.dmenu"
-arq_pastas_musicas="$DMENU_PASTA/pastas_de_musicas.dmenu"
+LISTA_DE_MUSICAS="$DMENU_PASTA/lista_de_musicas_completa.dmenu"
+INDICE="$DMENU_PASTA/indice_playlist.dmenu"
+MODULO="$DMENU_PASTA/modulo.dmenu"
+PASTAS_COM_MUSICAS="$DMENU_PASTA/pastas_de_musicas.dmenu"
 
 # Programa usado para tocar as músicas (Faz parte do pacote SoX)
-programaFLAC=play
-programaMP3=ffplay
+#PLAYER_FLAC=play
+#PLAYER_MP3=ffplay
 
 # Keys
 KEY_DMENU_FLAC_PLAY=p
@@ -34,9 +34,9 @@ FONT_DMENU_BACKGROUND=#080808
 # Função que atualiza o arquivo das músicas
 atualizar_listas_de_musicas() {
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	sort -R < <(du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg") > "$arq_lista_de_musicas" &&
+	sort -R < <(du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg") > "$LISTA_DE_MUSICAS" &&
 	# Captura todas as pastas dentro da pasta ~/Música/
-	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never -v "\/.*\..*$" | sed "/\/$/d" > "$arq_pastas_musicas"
+	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never -v "\/.*\..*$" | sed "/\/$/d" > "$PASTAS_COM_MUSICAS"
 }
 
 atualizar_statusbar(){
@@ -56,18 +56,32 @@ player() {
 	fi
 }
 
+player_playlist(){
+	local musicas=("$@")
+	# Inicia o índice do array com o valor "0"
+	echo '0' > "$INDICE"
+	while (( $(< "$INDICE") <= ${#musicas[@]} )); do
+		player "${musicas[$(< "$INDICE")]}"
+		# Atualiza indice no "INDICE"
+		echo "$(($(< "$INDICE") + 1))" > "$INDICE"
+	done
+	atualizar_statusbar
+}
+
 tocar_musica() {
 	# Utiliza Dmenu para abrir um arquivo individualmente
 	# Registrando módulo
-	echo '1' > "$arq_modulo"
+	echo '1' > "$MODULO"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
 	IFS=$'\n'
 	# Captura os nomes das músicas para uso do Dmenu, podemos usar "|" para não precisar "escapar" "/"
-	local todas_musicas=($(sed "s|^.*/\(.*\)$|\1|g" "$arq_lista_de_musicas"))
+	local todas_musicas=($(sed "s|^.*/\(.*\)$|\1|g" "$LISTA_DE_MUSICAS"))
 	# Captura música
-	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]}" | dmenu -p "Escolha uma música:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]}" | dmenu -p "Escolha uma música:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+	# Se não for escolhida nenhuma música, encerrar o script
+	[[ $musica_escolhida = '' ]] && exit
 	# Busca exatamente pela full path da musica
-	local musica=$(grep --color=never "$musica_escolhida$" "$arq_lista_de_musicas")
+	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
 	player "$musica"
 	atualizar_statusbar
 }
@@ -75,25 +89,26 @@ tocar_musica() {
 tocar_playlist() {
 	# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
 	# Registrando módulo
-	echo '2' > "$arq_modulo"
+	echo '2' > "$MODULO"
 	IFS=$'\n'
 	# Obtendo array com os nomes das pastas
-	local pastas=($(sed "s|.*/\(.*\)$|\1|g" "$arq_pastas_musicas"))
+	local pastas=($(sed "s|.*/\(.*\)$|\1|g" "$PASTAS_COM_MUSICAS"))
 	# Dmenu
-	local escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
-	[[ $escolher_playlist != '' ]] && notify-send -t 3250 "DMENU_FLAC" "Tocando: $escolher_playlist"
+	local escolher_playlist=$(printf '%s\n' "${pastas[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+	# Se nenhuma playlist for escolhida, encerrar o script
+	[[ $escolher_playlist != '' ]] && notify-send -t 3250 "DMENU_FLAC" "Tocando: $escolher_playlist" || exit
 	# Encontrar o endereço da pasta escolhida
-	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$arq_pastas_musicas")
+	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
 	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null))
-	# Inicia o índice do array com o valor "0"
-	echo '0' > "$arq_indice"
-	while [[ $(< "$arq_indice") -lt ${#musicas_da_pasta[@]} ]]; do
-		player "${musicas_da_pasta["$(< "$arq_indice")"]}"
-		# Atualiza indice no "arq_indice"
-		echo "$(($(< "$arq_indice") + 1))" > "$arq_indice"
-	done
-	atualizar_statusbar
+	#player_playlist "${musicas_da_pasta[@]}" "s"
+	player_playlist "${musicas_da_pasta[@]}"
 }
+
+#tocar_playlist_shuffle(){
+#	#RAND_MAX
+#	#RANDOM
+#	return
+#}
 
 proxima_musica() {
 	pkill -f "ffplay|play" &
@@ -102,8 +117,8 @@ proxima_musica() {
 
 musica_anterior() {
 	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
-	# printf "formato" aceita somente números naturais
-	echo "$(($(< "$arq_indice") - 2))" > "$arq_indice"
+	# printf "%formato" aceita somente números naturais
+	echo "$(($(< "$INDICE") - 2))" > "$INDICE"
 	proxima_musica
 }
 
@@ -113,37 +128,39 @@ eliminar_playlist(){
 }
 
 # Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
-[[ ! -e "$arq_lista_de_musicas" ]] && atualizar_listas_de_musicas
+[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
 	
 # Mostra título da música no Dmenu
-musica_tocando=$(pgrep -a "$programaFLAC" | sed "s|.*/\(.*\)$|Playing: \"\1\"|g")
+musica_tocando=$(pgrep -a play | sed "s|.*/\(.*\)$|Playing: \"\1\"|g")
 
 # Identifica corretamente o ID do processo que pertence à música
 id_musica=$(pgrep -f "ffplay|play")
 
 # Opções do Dmenu
 if [[ $(pgrep "ffplay|play") == '' ]]; then
-	menu_dmenu=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
+	MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
 else
 	# Dmenu's diferentes para "playlist" e música "solo"
-	case "$(< "$arq_modulo")" in
-		1)menu_dmenu=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_KILL_MUSIC] - [Parar Música!]" "[] - [$musica_tocando]");;
-		*)menu_dmenu=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_NEXT] - [Próxima Música!]" "[$KEY_DMENU_FLAC_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_FLAC_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [$musica_tocando]");;
+	case "$(< "$MODULO")" in
+		1)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_KILL_MUSIC] - [Parar Música!]" "[] - [$musica_tocando]");;
+		*)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_NEXT] - [Próxima Música!]" "[$KEY_DMENU_FLAC_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_FLAC_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [$musica_tocando]");;
 	esac
 fi
 
 # Número de "entradas" do menu - Dmenu
-if [[ ${#menu_dmenu[@]} -lt 5 ]]; then
-	linhas=5
+if [[ ${#MENU_DMENU[@]} -lt 5 ]]; then
+	LINHAS=5
 else
-	linhas="${#menu_dmenu[@]}"
+	LINHAS="${#MENU_DMENU[@]}"
 fi
 
 # Praticamente o menu que aparece para o usuário, capturando a ação desejada
-main_menu=$(printf '%s\n' "${menu_dmenu[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$linhas" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+
+[[ $MAIN_MENU = '' ]] && exit
 
 # Controle das ações do dmenu_flac
-case "${main_menu:1:1}" in
+case "${MAIN_MENU:1:1}" in
 	# Procurar Música
 	1) tocar_musica;;
 	# Tocar Músicas de Pasta
@@ -160,4 +177,6 @@ case "${main_menu:1:1}" in
 	$KEY_DMENU_FLAC_KILL_MUSIC|$KEY_DMENU_FLAC_NEXT) proxima_musica;;
 	# Previous
 	$KEY_DMENU_FLAC_PREVIOUS) musica_anterior;;
+	# Default
+	*) notify-send -u critical -t 3250 "DMENU_FLAC" "Comando não reconhecido!" && exit;;
 esac

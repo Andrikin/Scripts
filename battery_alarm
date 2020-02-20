@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Script para avisar quando a fonte desconectar ou parar de carregar
+
+while true; do
+	if [[ $(< /sys/class/power_supply/BAT0/status) == Discharging ]]; then
+		notify-send -u critical -t 4000 "Aviso!" "Fonte está DESCONECTADA!"
+		sleep 5
+	fi
+	sleep 1
+done &

@@ -2,20 +2,35 @@
 #Script para download de videos do youtube
 #TODO -
 
+erro_abortar(){
+   notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $nome_arquivo - Falhou..."
+   [[ ! -f $PASTA_ERRO_LOG ]] && printf '%s\n\n' "LOG DE LINK'S QUE NÃO COMPLETARAM DOWNLOAD:" > "$PASTA_ERRO_LOG"
+   num_entrada=$(wc -l < "$PASTA_ERRO_LOG")
+   echo "[$(($num_entrada - 2))] - $link" >> "$PASTA_ERRO_LOG"
+}
+
+sucesso(){
+	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $nome_arquivo - Concluído com Sucesso!"
+	[[ -e $nome_atual_arquivo ]] && mv "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.${nome_atual_arquivo//*./}"
+	# Por enquanto fica assim: se o link estiver na lista, é deletado
+	sed -i "/${id_link/video_temp/}/d" "$PASTA_ERRO_LOG"
+}
+
+trap erro_abortar EXIT
+set -e
+
+CARACTER_PROIBIDO='\/'
+PASTA_MUSICA="$HOME/Videos"
+PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_video.log
+
 link=$(zenity --entry --title="Youtube-Video" --text="Insira o link para download do video")
 
-id_link=$(youtube-dl --get-id "$link")
+id_link="video_temp$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$link")"
 
-nome_arquivo=$(youtube-dl --get-title "$link")
+nome_arquivo=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$link")
 
-youtube-dl -q --no-playlist --hls-prefer-native -f "[height<=720]" -o "$HOME/Videos/%(id)s.%(ext)s" "$link"  
-#youtube-dl -q --no-playlist -f "[height<=720]" -o "$HOME/Videos/%(id)s.%(ext)s" "$link"  
+youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA/video_temp%(id)s.%(ext)s" "$link"  
 
-nome_atual_arquivo=$(ls "$HOME/Videos" | grep --color=never "$id_link")
+nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
 
-if [[ -e $HOME/Videos/$nome_atual_arquivo ]]; then
-	notify-send --expire-time=3250 "Youtube-Video" "Vídeo $nome_arquivo concluído com sucesso"
-	mv "$HOME/Videos/$nome_atual_arquivo" "$HOME/Videos/$nome_arquivo.${nome_atual_arquivo//*./}"
-else
-	notify-send --expire-time=3250 -u critical "Youtube-Video" "Vídeo $nome_arquivo NÃO concluído com sucesso"
-fi
+trap sucesso EXIT

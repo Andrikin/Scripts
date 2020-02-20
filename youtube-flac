@@ -1,35 +1,36 @@
 #!/usr/bin/env bash
 # Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio do YouTube e converter esse nome_arquivo para o formato OGG
+# TODO - Fazer com que o script tente fazer download dos links que não deram certo..., comando sed para deletar não está funcionando, Fazer um script para download de vídeo ou de audio
 
 erro_abortar(){
-   notify-send -u critical --expire-time=3250 "YouTube-Flac" "Áudio: $nome_arquivo - Falhou..."
+   notify-send -u critical --expire-time=3250 "ERRO!" "Áudio: $nome_arquivo - Falhou..."
+   [[ ! -f $PASTA_ERRO_LOG ]] && printf '%s\n\n' "LOG DE LINK'S QUE NÃO COMPLETARAM DOWNLOAD:" > "$PASTA_ERRO_LOG"
+   num_entrada=$(wc -l < "$PASTA_ERRO_LOG")
+   echo "[$(($num_entrada - 2))] - $link" >> "$PASTA_ERRO_LOG"
 }
 
 sucesso(){
-   notify-send --expire-time=3250 "YouTube-Flac" "Áudio: $nome_arquivo - Concluído com Sucesso!"
+	notify-send --expire-time=3250 "SUCESSO!" "Áudio: $nome_arquivo - Concluído com Sucesso!"
+	[[ -e $nome_atual_arquivo ]] && rm "$nome_atual_arquivo" 
+	# Por enquanto fica assim: se o link estiver na lista, é deletado
+	sed -i "/${id_link/audio_temp/}/d" "$PASTA_ERRO_LOG"
 }
 
 trap erro_abortar EXIT
-
 set -e
 
-# Adicionar mais caracteres que não são interpretados pelo comando "mv"
-caracter_proibido='\/'
+CARACTER_PROIBIDO='\/' # Adicionar mais caracteres que não são interpretados pelo comando "mv"
+PASTA_MUSICA="$HOME/Música/AudiosYouTube"
+PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_audio.log
 
 link=$(zenity --entry --title="YouTube-FLAC" --text="Para download e conversão de áudio do YouTube, insira o link")
+nome_arquivo=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$link")
+id_link="audio_temp$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$link")"
 
-nome_arquivo=$(youtube-dl --get-title "$link")
+youtube-dl -q --no-playlist --socket-timeout 60 --youtube-skip-dash-manifest -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.%(ext)s" "$link"
 
-id_link=$(youtube-dl --get-id "$link")
+nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
 
-youtube-dl -q --no-playlist --youtube-skip-dash-manifest -f bestaudio -o "$HOME/Música/AudiosYouTube/%(id)s.%(ext)s" "$link"
-
-nome_atual_arquivo=$(ls "$HOME/Música/AudiosYouTube" | grep --color=never "$id_link")
-
-ffmpeg -i "$HOME/Música/AudiosYouTube/$nome_atual_arquivo" "$HOME/Música/AudiosYouTube/${nome_arquivo//["$caracter_proibido"]/}.ogg" -loglevel quiet
-
-if [[ -e $HOME/Música/AudiosYouTube/$nome_atual_arquivo ]]; then
-   rm "$HOME/Música/AudiosYouTube/$nome_atual_arquivo"
-fi
+ffmpeg -i "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet
 
 trap sucesso EXIT

@@ -3,11 +3,11 @@
 # TODO - 
 
 sucesso(){
-	notify-send --expire-time=3250 "Arquivo: $audio" "Criado com sucesso!"
-}
-
-erro_abortar(){
-	notify-send --expire-time=3250 "Arquivo: $audio" "Falhou ao ser criado..."
+	notify-send --expire-time=3250 "Criado com sucesso!" "Arquivo: $audio"
+}                                                            
+                                                             
+erro_abortar(){                                              
+	notify-send --expire-time=3250 "Falhou ao ser criado..." "Arquivo: $audio"
 }
 
 trap erro_abortar EXIT
