@@ -22,15 +22,16 @@ set -e
 CARACTER_PROIBIDO='\/' # Adicionar mais caracteres que não são interpretados pelo comando "mv"
 PASTA_MUSICA="$HOME/Música/AudiosYouTube"
 PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_audio.log
+DOWNLOAD_OPTIONS="--no-playlist --youtube-skip-dash-manifest --socket-timeout 60"
 
-link=$(zenity --entry --title="YouTube-FLAC" --text="Para download e conversão de áudio do YouTube, insira o link")
-nome_arquivo=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$link")
-id_link="audio_temp$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$link")"
+link=$(xsel -o -b)
+nome_arquivo=$(youtube-dl $DOWNLOAD_OPTIONS --get-title "$link")
+id_link="audio_temp$(youtube-dl $DOWNLOAD_OPTIONS --get-id "$link")"
 
-youtube-dl -q --no-playlist --socket-timeout 60 --youtube-skip-dash-manifest -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.%(ext)s" "$link"
+youtube-dl -q $DOWNLOAD_OPTIONS -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.%(ext)s" "$link"
 
 nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
 
-ffmpeg -i "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet
+ffmpeg -i -q:a 5 "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet
 
 trap sucesso EXIT

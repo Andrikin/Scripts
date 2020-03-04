@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
 # Script para diminuir volume atualizando o statusbar
 
-pactl -- set-sink-volume "$(pactl list | grep "Destino #" | sed "s/^.*\([[:digit:]]\)$/\1/g")" -1% & kill_sleep &
+#VOL_FILE="$HOME/.vol_mon.volume"
+#vol_down(){
+#	[[ ! -f $VOL_FILE ]] && {
+#		VOL=$(pactl list sinks | sed -n "10s/[\ \%]//gp" | cut -d'/' -f2)
+#		echo "$VOL" > "$VOL_FILE"
+#	}
+#	VOL=$(< "$VOL_FILE")
+#	(( $VOL <= 0 )) && exit
+#	pactl set-sink-volume 0 -1%
+#	(( VOL -- ))
+#	echo "$VOL" > "$VOL_FILE"
+#}
+#vol_down && kill_sleep &
+pactl set-sink-volume 0 -1% && kill_sleep &

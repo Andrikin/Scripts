@@ -4,6 +4,9 @@
 
 #${string:position:length} - Extração de strings a partir de position, podendo dar a quantidade de caracteres que serão extraídos por length. Sempre será da esquerda para direita a não ser que: ${string:(-number)} ou ${string: -number}
 
+PLAYER="ffplay"
+OPTIONS_PLAYER="-loglevel quiet -autoexit -i"
+
 # Atualiza o status bar
 atualizar_statusbar(){
 	sleep 1
@@ -15,7 +18,7 @@ arquivo_srt="${1/${1##*.}/srt}"
 # Verificar se arquivo srt existe, caso contrário, rodar o vídeo sem
 if [[ ! -e $arquivo_srt ]]; then
 	atualizar_statusbar
-	ffplay -loglevel quiet -autoexit -i "$1"
+	$PLAYER $OPTIONS_PLAYER "$1"
 else
 	# Verifica a codificação do arquivo .srt e converter para UTF-8
 	char_code=$(chardet3 "$arquivo_srt" | cut -d' ' -f2)
@@ -25,7 +28,8 @@ else
 	   rm "$arquivo_srt"
 	   mv temp.srt "$arquivo_srt"
 	fi
+	OPTIONS_PLAYER+=" -vf subtitles=$arquivo_srt"
 	atualizar_statusbar
-	ffplay -vf subtitles="$arquivo_srt" -loglevel quiet -autoexit -i "$1" 
+	$PLAYER ${OPTIONS_PLAYER[@]} "$1" 
 fi
 atualizar_statusbar

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+LINK=$(xsel -o -b)
+N_ARQUIVO="$(zenity --entry --text="Digite o nome do Arquivo Final:").pdf"
+curl "$LINK" --output "$N_ARQUIVO"
+[ -e "$N_ARQUIVO" ] && mv "$N_ARQUIVO" "$HOME/Documentos/CONCURSOS/Concurso TJ/Provas"
+[ "$?" == "0" ] && notify-send -t 2000 "Arquivo PDF" "Baixado e Movido arquivo $N_ARQUIVO com sucesso!"

@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
 # TODO - Fazer com que o script não rode caso tenha mesmo script já rodando
 
-separador=''
+#SEPARADOR=''
+SEPARADOR='|'
 
 music_playing() {
-	mostrar_musica=''
-	[[ $(pgrep play) != '' ]] && mostrar_musica="$separador $(pgrep -a play | sed "s|^.*/\(.*\)$| \1|g") "
+	DWM_MOSTRAR_MUSICA=$(pgrep -a "mplayer|ffplay|paplay")
+	[[ $DWM_MOSTRAR_MUSICA != '' ]] && DWM_MOSTRAR_MUSICA="$SEPARADOR  ${DWM_MOSTRAR_MUSICA##*/} "
 }
 
 date_hour() {
-	mostrar_data="$separador $(date '+%d/%b %H:%M') $separador"
+	DWM_MOSTRAR_DATA="$SEPARADOR $(date '+%d/%b %H:%M') $SEPARADOR"
 }
 
 volume_system() {
-	mostrar_volume="$separador Vol: $(pactl list sinks | grep --color=never "Volume: " | cut -d' ' -f6) "
+	DWM_MOSTRAR_VOLUME="$SEPARADOR Vol: $(pactl list sinks | sed -n "10s/[\ ]//gp" | cut -d'/' -f2) "
+	#DWM_MOSTRAR_VOLUME="$SEPARADOR Vol: $(< "$HOME/.vol_mon.volume")% "
 }
 
 hd_usage(){
-	mostrar_uso_hd="$separador HD: $(df -h --output=avail | sed -n "4s/\ //gp") "
+	DWM_MOSTRAR_USO_HD="$SEPARADOR HD: $(df -h --output=avail | sed -n "4s/[\ ]//gp") "
 }
 
 while true; do
@@ -25,6 +27,6 @@ while true; do
 	volume_system
 	date_hour
 	hd_usage
-	xsetroot -name "$mostrar_musica$mostrar_volume$mostrar_uso_hd$mostrar_data"
+	xsetroot -name "$DWM_MOSTRAR_MUSICA$DWM_MOSTRAR_VOLUME$DWM_MOSTRAR_USO_HD$DWM_MOSTRAR_DATA"
 	sleep 1m
 done &

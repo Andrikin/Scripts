@@ -11,7 +11,7 @@ erro_abortar(){
 
 sucesso(){
 	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $nome_arquivo - Concluído com Sucesso!"
-	[[ -e $nome_atual_arquivo ]] && mv "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.${nome_atual_arquivo//*./}"
+	[[ -e $nome_atual_arquivo ]] && mv "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.${nome_atual_arquivo##*.}"
 	# Por enquanto fica assim: se o link estiver na lista, é deletado
 	sed -i "/${id_link/video_temp/}/d" "$PASTA_ERRO_LOG"
 }
@@ -22,14 +22,13 @@ set -e
 CARACTER_PROIBIDO='\/'
 PASTA_MUSICA="$HOME/Videos"
 PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_video.log
+DOWNLOAD_OPTIONS="--no-playlist --youtube-skip-dash-manifest --socket-timeout 60"
 
-link=$(zenity --entry --title="Youtube-Video" --text="Insira o link para download do video")
+link=$(xsel -o -b)
+id_link="video_temp$(youtube-dl $DOWNLOAD_OPTIONS --get-id "$link")"
+nome_arquivo=$(youtube-dl $DOWNLOAD_OPTIONS --get-title "$link")
 
-id_link="video_temp$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$link")"
-
-nome_arquivo=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$link")
-
-youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA/video_temp%(id)s.%(ext)s" "$link"  
+youtube-dl -q $DOWNLOAD_OPTIONS --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA/video_temp%(id)s.%(ext)s" "$link"  
 
 nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
 

@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
+# TODO - Quando mudar de sink, deve atualizar o arquivo com valor correto de volume
 # Script para aumentar volume atualizando o statusbar
 
-pactl -- set-sink-volume "$(pactl list | grep "Destino #" | sed "s/^.*\([[:digit:]]\)$/\1/g")" +1% & kill_sleep &
-
+#VOL_FILE="$HOME/.vol_mon.volume"
+#vol_up(){
+#	[[ ! -f $VOL_FILE ]] && {
+#		VOL=$(pactl list sinks | sed -n "10s/[\ \%]//gp" | cut -d'/' -f2)
+#		echo "$VOL" > "$VOL_FILE"
+#	}
+#	VOL=$(< "$VOL_FILE")
+#	(( $VOL >= 100 )) && exit
+#	pactl set-sink-volume 0 +1%
+#	(( VOL ++ ))
+#	echo "$VOL" > "$VOL_FILE"
+#}
+#vol_up && kill_sleep &
+pactl set-sink-volume 0 +1% && kill_sleep &
