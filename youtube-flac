@@ -5,13 +5,14 @@
 erro_abortar(){
    notify-send -u critical --expire-time=3250 "ERRO!" "Áudio: $nome_arquivo - Falhou..."
    [[ ! -f $PASTA_ERRO_LOG ]] && printf '%s\n\n' "LOG DE LINK'S QUE NÃO COMPLETARAM DOWNLOAD:" > "$PASTA_ERRO_LOG"
+   #[[ -f $nome_atual_arquivo ]] && rm "$nome_atual_arquivo"
    num_entrada=$(wc -l < "$PASTA_ERRO_LOG")
    echo "[$(($num_entrada - 2))] - $link" >> "$PASTA_ERRO_LOG"
 }
 
 sucesso(){
 	notify-send --expire-time=3250 "SUCESSO!" "Áudio: $nome_arquivo - Concluído com Sucesso!"
-	[[ -e $nome_atual_arquivo ]] && rm "$nome_atual_arquivo" 
+	#[[ -e $nome_atual_arquivo ]] && rm "$nome_atual_arquivo" 
 	# Por enquanto fica assim: se o link estiver na lista, é deletado
 	sed -i "/${id_link/audio_temp/}/d" "$PASTA_ERRO_LOG"
 }
@@ -32,6 +33,8 @@ youtube-dl -q $DOWNLOAD_OPTIONS -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.
 
 nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
 
-ffmpeg -i -q:a 5 "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet
+ffmpeg -i "$nome_atual_arquivo" -q:a 5 "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet
+
+[[ -f $nome_atual_arquivo ]] && rm "$nome_atual_arquivo"
 
 trap sucesso EXIT

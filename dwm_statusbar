@@ -22,6 +22,14 @@ hd_usage(){
 	DWM_MOSTRAR_USO_HD="$SEPARADOR HD: $(df -h --output=avail | sed -n "4s/[\ ]//gp") "
 }
 
+dwm_ini(){
+	IFS=$'\n'
+	nproc=($(pgrep -f "^bash.*dwm_statusbar$"))
+}
+
+[[ $(pgrep -f "sleep 1m") != '' ]] && pkill -f "sleep 1m"
+dwm_ini
+[[ $(pgrep -f "^bash.*dwm_statusbar$") != '' ]] && (( ${#nproc[@]} > 1 )) && exit
 while true; do
 	music_playing
 	volume_system

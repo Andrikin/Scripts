@@ -5,6 +5,7 @@
 erro_abortar(){
    notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $nome_arquivo - Falhou..."
    [[ ! -f $PASTA_ERRO_LOG ]] && printf '%s\n\n' "LOG DE LINK'S QUE NÃO COMPLETARAM DOWNLOAD:" > "$PASTA_ERRO_LOG"
+   [[ -f $nome_atual_arquivo ]] && rm "$nome_atual_arquivo"
    num_entrada=$(wc -l < "$PASTA_ERRO_LOG")
    echo "[$(($num_entrada - 2))] - $link" >> "$PASTA_ERRO_LOG"
 }

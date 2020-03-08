@@ -42,7 +42,7 @@ ID_MUSICA=${MUSICA_TOCANDO%% *}
 atualizar_listas_de_musicas() {
 	local ARQUIVOS_BUSCA=".flac\|.mp3\|.ogg"
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	sort -R < <(du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA) > "$LISTA_DE_MUSICAS"
+	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
 	# Captura todas as pastas dentro da pasta ~/Música/
 	du "$MUSICAS_PASTA" | cut -f2 > "$PASTAS_COM_MUSICAS"
 	
@@ -55,13 +55,13 @@ atualizar_statusbar(){
 
 player() {
 	[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
-		
 	atualizar_statusbar
 	$PLAYER $OPTIONS_PLAYER "$1"
 }
 
 player_playlist(){
-	local musicas=($(sort -R < <(printf '%s\n' "$@")))
+	#local musicas=($(sort -R < <(printf '%s\n' "$@")))
+	local musicas=("$@")
 	echo '0' > "$INDICE"
 	while (( $(< "$INDICE") <= ${#musicas[@]} )); do
 		player "${musicas[$(< "$INDICE")]}"
@@ -77,7 +77,7 @@ tocar_musica() {
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
 	IFS=$'\n'
 	local todas_musicas=($(< "$LISTA_DE_MUSICAS"))
-	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]##*/}" | dmenu -p "Escolha uma música:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]##*/}" | shuf | dmenu -p "Escolha uma música:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
 	# Se não for escolhida nenhuma música, encerrar o script
 	[[ $musica_escolhida = '' ]] && exit
 	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
@@ -91,11 +91,11 @@ tocar_playlist() {
 	echo '2' > "$MODULO"
 	IFS=$'\n'
 	local pastas=($(< "$PASTAS_COM_MUSICAS"))
-	local escolher_playlist=$(printf '%s\n' "${pastas[@]##*/}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+	local escolher_playlist=$(printf '%s\n' "${pastas[@]##*/}" | shuf | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
 	# Se nenhuma playlist for escolhida, encerrar o script
 	[[ $escolher_playlist != '' ]] && notify-send -t 3250 "DMENU_FLAC" "Tocando: $escolher_playlist" || exit
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
-	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null))
+	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null | shuf))
 	player_playlist "${musicas_da_pasta[@]}"
 }
 
@@ -112,7 +112,7 @@ musica_anterior() {
 }
 
 eliminar_playlist(){
-   	pkill -f "^$PLAYER|sleep 1m|^bash.*dmenu_flac$" &
+   	pkill -f "^$PLAYER|sleep 1m|^bash.*dmenu_flac$"
 }
 
 # Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
