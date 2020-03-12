@@ -44,7 +44,7 @@ atualizar_listas_de_musicas() {
 	# Captura todas as músicas nos formatos flac, ogg, mp3
 	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
 	# Captura todas as pastas dentro da pasta ~/Música/
-	du "$MUSICAS_PASTA" | cut -f2 > "$PASTAS_COM_MUSICAS"
+	du "$MUSICAS_PASTA"* | cut -f2 > "$PASTAS_COM_MUSICAS"
 	
 }
 
@@ -93,14 +93,14 @@ tocar_playlist() {
 	local pastas=($(< "$PASTAS_COM_MUSICAS"))
 	local escolher_playlist=$(printf '%s\n' "${pastas[@]##*/}" | shuf | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
 	# Se nenhuma playlist for escolhida, encerrar o script
-	[[ $escolher_playlist != '' ]] && notify-send -t 3250 "DMENU_FLAC" "Tocando: $escolher_playlist" || exit
+	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "DMENU_FLAC" "Escutando músicas da pasta: $escolher_playlist" || exit
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
 	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null | shuf))
 	player_playlist "${musicas_da_pasta[@]}"
 }
 
 proxima_musica() {
-	pkill -f "^$PLAYER"
+	pkill -f "^$PLAYER" &
 	atualizar_statusbar
 }
 
@@ -112,7 +112,7 @@ musica_anterior() {
 }
 
 eliminar_playlist(){
-   	pkill -f "^$PLAYER|sleep 1m|^bash.*dmenu_flac$"
+   	pkill -f "^$PLAYER|sleep 1m|^bash.*dmenu_flac$" &
 }
 
 # Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada

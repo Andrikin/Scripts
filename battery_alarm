@@ -7,7 +7,7 @@ batt_ini(){
 	nproc=($(pgrep -f "^bash.*battery_alarm$"))
 }
 batt_ini
-[[ $(pgrep -f "^bash.*battery_alarm$") != '' ]] && (( ${#nproc[@]} > 1 )) && exit
+(( ${#nproc[@]} > 1 )) && exit
 while true; do
 	if [[ $(< /sys/class/power_supply/BAT0/status) == Discharging ]]; then
 		notify-send -u critical -t 2000 "Aviso!" "Fonte está DESCONECTADA!"

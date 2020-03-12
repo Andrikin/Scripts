@@ -5,8 +5,8 @@
 SEPARADOR='|'
 
 music_playing() {
-	DWM_MOSTRAR_MUSICA=$(pgrep -a "mplayer|ffplay|paplay")
-	[[ $DWM_MOSTRAR_MUSICA != '' ]] && DWM_MOSTRAR_MUSICA="$SEPARADOR  ${DWM_MOSTRAR_MUSICA##*/} "
+	DWM_MOSTRAR_MUSICA=$(pgrep -a "mplayer|ffplay|paplay" | sed "s|.*/||g" 2> /dev/null)
+	[[ $DWM_MOSTRAR_MUSICA != '' ]] && DWM_MOSTRAR_MUSICA="$SEPARADOR  $DWM_MOSTRAR_MUSICA "
 }
 
 date_hour() {
@@ -29,7 +29,7 @@ dwm_ini(){
 
 [[ $(pgrep -f "sleep 1m") != '' ]] && pkill -f "sleep 1m"
 dwm_ini
-[[ $(pgrep -f "^bash.*dwm_statusbar$") != '' ]] && (( ${#nproc[@]} > 1 )) && exit
+(( ${#nproc[@]} > 1 )) && exit
 while true; do
 	music_playing
 	volume_system
