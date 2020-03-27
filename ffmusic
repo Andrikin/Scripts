@@ -3,20 +3,15 @@
 
 PLAYER="mplayer"
 OPTIONS_PLAYER="-really-quiet"
-ID_MUSICA=$(pgrep -f "^$PLAYER")
-
-[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
+ID_MUS=$(pgrep -f "^$PLAYER")
 
 # Dar update no statusbar
-sleep 1
-kill_sleep
+redraw_sb(){
+	pkill -f "sleep 1m" &
+}
 
+[[ $ID_MUS != '' ]] && kill "$ID_MUS"
+
+redraw_sb
 $PLAYER $OPTIONS_PLAYER "$1"
-#if [[ $1 != *.mp3 ]]; then
-#	play "$1"
-#else
-#	ffplay -loglevel quiet -nodisp -autoexit "$1"
-#fi
-
-sleep 1
-kill_sleep
+redraw_sb

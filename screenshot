@@ -2,5 +2,9 @@
 # Script para tirar screenshot da tela
 
 nome_arquivo="$(zenity --entry --title="ScreenShot!" --text="Insira o nome do arquivo:").png"
-
-import -window root "$HOME/Imagens/screenshot/$nome_arquivo"
+[[ $nome_arquivo == '' ]] && nome_arquivo=screeenshot-$(date '+%d/%b %H:%M')
+sleep 0.5
+xscreenshot | ff2png > "$HOME/Imagens/screenshot/$nome_arquivo"
+notify-send -t 4000 "Screenshot" "Concluído com Sucesso!"
+#scrot -q 100 "$HOME/Imagens/screenshot/$nome_arquivo"
+#import -window root "$HOME/Imagens/screenshot/$nome_arquivo"

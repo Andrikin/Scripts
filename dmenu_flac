@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# TODO - Usar unique (?) - comando para separar as pastas com mesmo nome, repeat, melhorar comando que captura todas as pastas de música 
+# TODO - Usar unique (?), repeat, Repensar como manter tracking da música que está tocando
 # pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
 # Utiliza Mplayer, fonte Google Source Code Pro Medium
 # Dmenu_flac cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
-# Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente
+# Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
-DMENU_PASTA="$HOME/.local/share/dmenu_flac"
-MUSICAS_PASTA="$HOME/Música/"
+DMENU_PASTA="$HOME"/.local/share/dmenu_flac
+MUSICAS_PASTA="$HOME"/Música/
 
 # Arquivos usados
-LISTA_DE_MUSICAS="$DMENU_PASTA/lista_de_musicas_completa.dmenu"
-INDICE="$DMENU_PASTA/indice_playlist.dmenu"
-MODULO="$DMENU_PASTA/modulo.dmenu"
-PASTAS_COM_MUSICAS="$DMENU_PASTA/pastas_de_musicas.dmenu"
+LISTA_DE_MUSICAS="$DMENU_PASTA"/lista_de_musicas_completa.dmenu
+INDICE="$DMENU_PASTA"/indice_playlist.dmenu
+MODULO="$DMENU_PASTA"/modulo.dmenu
+PASTAS_COM_MUSICAS="$DMENU_PASTA"/pastas_de_musicas.dmenu
 
 # Keys
 KEY_DMENU_FLAC_PLAY=p
@@ -40,7 +40,7 @@ ID_MUSICA=${MUSICA_TOCANDO%% *}
 
 # Função que atualiza o arquivo das músicas
 atualizar_listas_de_musicas() {
-	local ARQUIVOS_BUSCA=".flac\|.mp3\|.ogg"
+	local ARQUIVOS_BUSCA=".flac\|.mp3\|.ogg\|.oga"
 	# Captura todas as músicas nos formatos flac, ogg, mp3
 	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
 	# Captura todas as pastas dentro da pasta ~/Música/
@@ -56,6 +56,7 @@ atualizar_statusbar(){
 player() {
 	[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
 	atualizar_statusbar
+	#$PLAYER $OPTIONS_PLAYER "$1" 2>&1 /dev/null
 	$PLAYER $OPTIONS_PLAYER "$1"
 }
 
@@ -95,7 +96,7 @@ tocar_playlist() {
 	# Se nenhuma playlist for escolhida, encerrar o script
 	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "DMENU_FLAC" "Escutando músicas da pasta: $escolher_playlist" || exit
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
-	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{ogg,flac,mp3} 2> /dev/null | shuf))
+	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{oga,ogg,flac,mp3} 2> /dev/null | shuf))
 	player_playlist "${musicas_da_pasta[@]}"
 }
 
@@ -115,49 +116,73 @@ eliminar_playlist(){
    	pkill -f "^$PLAYER|sleep 1m|^bash.*dmenu_flac$" &
 }
 
-# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
-[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
-	
-# Opções do Dmenu
-if [[ $MUSICA_TOCANDO == '' ]]; then
-	MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
-else
-	# Dmenu's diferentes para "playlist" e música "solo"
-	case "$(< "$MODULO")" in
-		1)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
-		*)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_NEXT] - [Próxima Música!]" "[$KEY_DMENU_FLAC_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_FLAC_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+dmenu_init(){
+	# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
+	[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
+}
+
+dmenu_options(){
+	# Opções do Dmenu
+	if [[ $MUSICA_TOCANDO == '' ]]; then
+		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
+	else
+		# Dmenu's diferentes para "playlist" e música "solo"
+		case "$(< "$MODULO")" in
+			1)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+			*)MENU_DMENU=("[$KEY_DMENU_FLAC_PLAY] - [Play!]" "[$KEY_DMENU_FLAC_STOP] - [Stop!]" "[$KEY_DMENU_FLAC_NEXT] - [Próxima Música!]" "[$KEY_DMENU_FLAC_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_FLAC_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+		esac
+	fi
+}
+
+dmenu_lines(){
+	# Número de "entradas" do menu - Dmenu
+	if [[ ${#MENU_DMENU[@]} -lt 5 ]]; then
+		LINHAS=5
+	else
+		LINHAS="${#MENU_DMENU[@]}"
+	fi
+}
+
+dmenu_main_menu(){
+	MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
+
+	[[ $MAIN_MENU = '' ]] && exit
+}
+
+dmenu_init_modules(){
+	dmenu_init
+
+	dmenu_options
+
+	dmenu_lines
+
+	dmenu_main_menu
+}
+
+main(){
+	dmenu_init_modules
+
+	# Controle das ações do dmenu_flac
+	case "${MAIN_MENU:1:1}" in
+		# Procurar Música
+		1) tocar_musica;;
+		# Tocar Músicas de Pasta
+		2) tocar_playlist;;
+		# Atualizar Lista de Músicas
+		3) atualizar_listas_de_musicas;;
+		# Play
+		$KEY_DMENU_FLAC_PLAY) kill -cont "$ID_MUSICA";;
+		# Stop
+		$KEY_DMENU_FLAC_STOP) kill -stop "$ID_MUSICA";;
+		# Encerra playlist
+		$KEY_DMENU_FLAC_QUIT_PLAYLIST) eliminar_playlist;;
+		# Next/Eliminar a música atual
+		$KEY_DMENU_FLAC_KILL_MUSIC|$KEY_DMENU_FLAC_NEXT) proxima_musica;;
+		# Previous
+		$KEY_DMENU_FLAC_PREVIOUS) musica_anterior;;
+		# Default
+		*) notify-send -u critical -t 3250 "DMENU_FLAC" "Comando não reconhecido!" & exit;;
 	esac
-fi
+}
 
-# Número de "entradas" do menu - Dmenu
-if [[ ${#MENU_DMENU[@]} -lt 5 ]]; then
-	LINHAS=5
-else
-	LINHAS="${#MENU_DMENU[@]}"
-fi
-
-MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | dmenu -p "Escolha uma das opçoes:" -b -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND")
-
-[[ $MAIN_MENU = '' ]] && exit
-
-# Controle das ações do dmenu_flac
-case "${MAIN_MENU:1:1}" in
-	# Procurar Música
-	1) tocar_musica;;
-	# Tocar Músicas de Pasta
-	2) tocar_playlist;;
-	# Atualizar Lista de Músicas
-	3) atualizar_listas_de_musicas;;
-	# Play
-	$KEY_DMENU_FLAC_PLAY) kill -cont "$ID_MUSICA";;
-	# Stop
-	$KEY_DMENU_FLAC_STOP) kill -stop "$ID_MUSICA";;
-	# Encerra playlist
-	$KEY_DMENU_FLAC_QUIT_PLAYLIST) eliminar_playlist;;
-	# Next/Eliminar a música atual
-	$KEY_DMENU_FLAC_KILL_MUSIC|$KEY_DMENU_FLAC_NEXT) proxima_musica;;
-	# Previous
-	$KEY_DMENU_FLAC_PREVIOUS) musica_anterior;;
-	# Default
-	*) notify-send -u critical -t 3250 "DMENU_FLAC" "Comando não reconhecido!" & exit;;
-esac
+main
