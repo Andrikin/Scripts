@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+
+# TODO - repeat, Encontrar uma maneira de tirar a atualização do statusbar do dmenu_player mudar nome de dmenu_player para dmenu_player
+
+# pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
+
+# Utiliza Mplayer, fonte Google Source Code Pro Medium, scripts para atualizar statusbar [lemonbar]
+# Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
+# Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
+
+NOME_SCRIPT=dmenu_player
+
+DMENU_PASTA="$HOME"/.local/share/"$NOME_SCRIPT"
+MUSICAS_PASTA="$HOME"/Música/
+
+# Arquivos usados
+LISTA_DE_MUSICAS="$DMENU_PASTA"/lista_de_musicas_completa.dmenu
+INDICE="$DMENU_PASTA"/indice_playlist.dmenu
+MODULO="$DMENU_PASTA"/modulo.dmenu
+PASTAS_COM_MUSICAS="$DMENU_PASTA"/pastas_de_musicas.dmenu
+
+# Keys
+KEY_DMENU_PLAYER_PLAY=p
+KEY_DMENU_PLAYER_STOP=s
+KEY_DMENU_PLAYER_KILL_MUSIC=x
+KEY_DMENU_PLAYER_NEXT=n
+KEY_DMENU_PLAYER_PREVIOUS=b
+KEY_DMENU_PLAYER_QUIT_PLAYLIST=q
+
+# Fonte dmenu
+#FONT_DMENU="Source Code Pro Medium:size=10"
+#FONT_DMENU_FOREGROUND=#d7d7d7
+#FONT_DMENU_BACKGROUND=#080808
+
+# Player utilizado
+PLAYER=(mplayer -really-quiet)
+
+# Mostra título da música no Dmenu
+MUSICA_TOCANDO=$(pgrep -a "^$PLAYER")
+
+# Identifica corretamente o ID do processo que pertence à música
+ID_MUSICA=${MUSICA_TOCANDO%% *}
+
+# $1=MENSAGEM_PROMPT
+run_dmenu_command(){
+	#dmenu -p "$1" -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND"
+	#dmenu -p "$1" -i -f -l "$LINHAS"
+	dmenu -i -f -l "$LINHAS"
+}
+
+
+# Função que atualiza o arquivo das músicas
+atualizar_listas_de_musicas() {
+	local ARQUIVOS_BUSCA=".flac\|.mp3\|.ogg\|.oga"
+	# Captura todas as músicas nos formatos flac, ogg, mp3
+	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
+	# Captura todas as pastas dentro da pasta ~/Música/
+	du "$MUSICAS_PASTA"* | cut -f2 > "$PASTAS_COM_MUSICAS"
+	
+}
+
+atualizar_statusbar(){
+	#[[ $MUSICA_TOCANDO == '' ]] && pkill -f "sleep 1m" &
+	#pkill -f "sleep 1m" &
+	"$HOME"/.config/lemonbar/run_lemonbar &
+}
+
+player() {
+	[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
+	atualizar_statusbar
+	#$PLAYER $OPTIONS_PLAYER "$1" 2>&1 /dev/null
+	"${PLAYER[@]}" "$1"
+}
+
+player_playlist(){
+	#local musicas=($(sort -R < <(printf '%s\n' "$@")))
+	local musicas=("$@")
+	echo '0' > "$INDICE"
+	while (( $(< "$INDICE") <= ${#musicas[@]} )); do
+		player "${musicas[$(< "$INDICE")]}"
+		echo "$(($(< "$INDICE") + 1))" > "$INDICE"
+	done
+	atualizar_statusbar
+}
+
+tocar_musica() {
+	# Utiliza Dmenu para abrir um arquivo individualmente
+	# Registrando módulo
+	echo '1' > "$MODULO"
+	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
+	local IFS=$'\n'
+	local todas_musicas=($(< "$LISTA_DE_MUSICAS"))
+	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]##*/}" | shuf | run_dmenu_command "Escolha uma música:")
+	# Se não for escolhida nenhuma música, encerrar o script
+	[[ $musica_escolhida = '' ]] && exit
+	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
+	player "$musica"
+	atualizar_statusbar
+}
+
+tocar_playlist() {
+	# Abrindo Dmenu com opções de "playlist", sendo estas as pastas dentro de Música/
+	# Registrando módulo
+	echo '2' > "$MODULO"
+	local IFS=$'\n'
+	local pastas=($(< "$PASTAS_COM_MUSICAS"))
+	local escolher_playlist=$(printf '%s\n' "${pastas[@]##*/}" | shuf | run_dmenu_command "Escolha uma das opçoes:")
+	# Se nenhuma playlist for escolhida, encerrar o script
+	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $escolher_playlist" || exit
+	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
+	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{oga,ogg,flac,mp3} 2> /dev/null | shuf))
+	player_playlist "${musicas_da_pasta[@]}"
+}
+
+proxima_musica() {
+	pkill -f "^$PLAYER" &
+	atualizar_statusbar
+}
+
+musica_anterior() {
+	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
+	# printf "%string" aceita somente números naturais
+	echo "$(($(< "$INDICE") - 2))" > "$INDICE"
+	proxima_musica
+}
+
+eliminar_playlist(){
+   	pkill -f "^$PLAYER|^bash.*${NOME_SCRIPT}$" &
+	atualizar_statusbar
+}
+
+dmenu_init(){
+	# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
+	[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
+}
+
+dmenu_options(){
+	# Opções do Dmenu
+	if [[ $MUSICA_TOCANDO == '' ]]; then
+		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
+	else
+		# Dmenu's diferentes para "playlist" e música "solo"
+		case "$(< "$MODULO")" in
+			1)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+			*)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+		esac
+	fi
+}
+
+dmenu_lines(){
+	# Número de "entradas" do menu - Dmenu
+	if [[ ${#MENU_DMENU[@]} -lt 5 ]]; then
+		LINHAS=5
+	else
+		LINHAS="${#MENU_DMENU[@]}"
+	fi
+}
+
+dmenu_main_menu(){
+	MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | run_dmenu_command "Escolha uma das opçoes:")
+
+	[[ $MAIN_MENU == '' ]] && exit
+}
+
+dmenu_init_modules(){
+	dmenu_init
+	dmenu_options
+	dmenu_lines
+	dmenu_main_menu
+}
+
+main(){
+	dmenu_init_modules
+
+	# Controle das ações do dmenu_player
+	case "${MAIN_MENU:1:1}" in
+		# Procurar Música
+		1) tocar_musica;;
+		# Tocar Músicas de Pasta
+		2) tocar_playlist;;
+		# Atualizar Lista de Músicas
+		3) atualizar_listas_de_musicas;;
+		# Play
+		$KEY_DMENU_PLAYER_PLAY) kill -cont "$ID_MUSICA";;
+		# Stop
+		$KEY_DMENU_PLAYER_STOP) kill -stop "$ID_MUSICA";;
+		# Encerra playlist
+		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) eliminar_playlist;;
+		# Next/Eliminar a música atual
+		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) proxima_musica;;
+		# Previous
+		$KEY_DMENU_PLAYER_PREVIOUS) musica_anterior;;
+		# Default
+		*) notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit;;
+	esac
+}
+
+main

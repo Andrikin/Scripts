@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Simple Image Viewer
 
-pwd_arquivo=$(realpath "$1")
+PWD_ARQUIVO=$(realpath "$1")
 
-[[ -f $1 ]] && sxiv -qfa "$1" "${pwd_arquivo%/*}" || sxiv -qtfa "$1"
+[[ -f $1 ]] && sxiv -qfa "$1" "${PWD_ARQUIVO%/*}" || sxiv -qtfa "$1"

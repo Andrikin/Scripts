@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 # Script player para arquivos de audio
 
-PLAYER="mplayer"
-OPTIONS_PLAYER="-really-quiet"
+MUSICA="$1"
+PLAYER=(mplayer -really-quiet)
 ID_MUS=$(pgrep -f "^$PLAYER")
 
 # Dar update no statusbar
-redraw_sb(){
-	pkill -f "sleep 1m" &
+atualizar_statusbar(){
+	"$HOME"/.config/lemonbar/run_lemonbar &
 }
 
-[[ $ID_MUS != '' ]] && kill "$ID_MUS"
+play_music(){
+	atualizar_statusbar
+	"${PLAYER[@]}" "$MUSICA"
+}
 
-redraw_sb
-$PLAYER $OPTIONS_PLAYER "$1"
-redraw_sb
+main(){
+	[[ $ID_MUS != '' ]] && kill "$ID_MUS"
+	play_music
+	atualizar_statusbar
+}
+
+main

@@ -1,30 +1,43 @@
 #!/usr/bin/env bash
+
 # TODO - 
+
+WIFI_ATUAL="off"
+WIFI_STATUS=$(nmcli -t dev | grep --color=never wifi | cut -d':' -f3)
+
 erro(){
-	[[ $escolher_wifi != '' ]] && notify-send -u critical --expire-time=3250 "Erro!" "Não foi possível Conexão!"
+	[[ $ESCOLHER_WIFI != '' ]] && notify-send -u critical --expire-time=3250 "Erro!" "Não foi possível Conexão!"
 }
 
 sucesso(){
-	[[ $wifi_status = conectado ]] && notify-send --expire-time=3250 "Sucesso!" "Conexão Realizada!"
+	[[ $WIFI_STATUS = conectado ]] && notify-send --expire-time=3250 "Sucesso!" "Conexão Realizada!"
+}
+
+# $1=MENSAGEM_PROMPT
+run_dmenu_command(){
+	dmenu -p "$1" -i -f -l 5
+}
+
+verify_wifi(){
+	if [[ $WIFI_STATUS != desconectado ]]; then
+		WIFI_ATUAL=$(nmcli -t connection show --active | cut -d':' -f1)
+	fi
+}
+
+main(){
+	verify_wifi
+	ESCOLHER_WIFI=$(nmcli -t device wifi list | cut -d':' -f2 | run_dmenu_command "[$WIFI_ATUAL]")
+	if [[ $ESCOLHER_WIFI != '' ]]; then
+		nmcli device wifi connect "$ESCOLHER_WIFI" password "$(zenity --entry --text="Digite a senha do Wi-Fi:")"
+	else
+		exit
+	fi
 }
 
 trap erro EXIT
 
 set -e
 
-wifi_atual="off"
-wifi_status=$(nmcli -t dev | grep --color=never wifi | cut -d':' -f3)
-if [[ $wifi_status != desconectado ]]; then
-	wifi_atual=$(nmcli -t connection show --active | cut -d':' -f1)
-	nmcli device wifi rescan
-fi
-
-escolher_wifi=$(nmcli -t device wifi list | cut -d':' -f2 | dmenu -p "Escolha um Wifi: [$wifi_atual]" -b -i -f -l 5 -fn "Source Code Pro Medium" -nb "#080808" -nf "#d7d7d7" -sb "#d7d7d7" -sf "#080808")
-
-if [[ $escolher_wifi != '' ]]; then
-	nmcli device wifi connect "$escolher_wifi" password "$(zenity --entry --text="Digite a senha do Wi-Fi:")"
-else
-	exit # Testando a ideia de encerrar o script em determinada condição
-fi
+main
 
 trap sucesso EXIT
