@@ -4,10 +4,10 @@
 
 # Script para abrir arquivos de vídeo com subtítulos usando ffmpeg
 
-ARQUIVO_PRINCIPAL="$1"
+VIDEO="$1"
 ARQUIVO_SRT="${1/${1##*.}/srt}"
 ARQUIVO_TEMP="${1%/*}"/temp.srt
-PLAYER=(ffplay -loglevel quiet -autoexit -i)
+PLAY=(ffplay -loglevel quiet -autoexit -i)
 
 # Atualiza o status bar
 atualizar_statusbar(){
@@ -17,7 +17,7 @@ atualizar_statusbar(){
 # $1=$ARQUIVO_SRT; $2=$ARQUIVO_TEMP
 # Verifica a codificação do arquivo .srt e converter para UTF-8
 to_utf8(){
-	PLAYER+=(-vf subtitles="$1")
+	PLAY+=(-vf subtitles="$1")
 	local char_code=$(chardet3 "$1" | sed "s/^.*:\ //g" | cut -d' ' -f1)
 
 	if [[ $char_code != utf-8 ]]
@@ -30,7 +30,7 @@ to_utf8(){
 play_video(){
 	atualizar_statusbar
 	# Problema com espaço? Sim, comandos que precisam interpretar "espaço" ou outros caracteres precisam ser "quotados"
-	"${PLAYER[@]}" "$ARQUIVO_PRINCIPAL"
+	"${PLAY[@]}" "$VIDEO"
 }
 
 main(){

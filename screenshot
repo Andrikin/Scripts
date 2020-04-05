@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # Script para tirar screenshot da tela
 
 NOME_ARQUIVO=screeenshot-$(date '+%d-%b %H:%M').png

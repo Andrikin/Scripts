@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO - repeat, Encontrar uma maneira de tirar a atualização do statusbar do dmenu_player mudar nome de dmenu_player para dmenu_player
+# TODO - repeat, Encontrar uma maneira de tirar a atualização do statusbar do dmenu_player
 
 # pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
 
@@ -8,8 +8,7 @@
 # Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
-NOME_SCRIPT=dmenu_player
-
+NOME_SCRIPT="${0##*/}"
 DMENU_PASTA="$HOME"/.local/share/"$NOME_SCRIPT"
 MUSICAS_PASTA="$HOME"/Música/
 
@@ -33,10 +32,10 @@ KEY_DMENU_PLAYER_QUIT_PLAYLIST=q
 #FONT_DMENU_BACKGROUND=#080808
 
 # Player utilizado
-PLAYER=(mplayer -really-quiet)
+PLAY=(mplayer -really-quiet)
 
 # Mostra título da música no Dmenu
-MUSICA_TOCANDO=$(pgrep -a "^$PLAYER")
+MUSICA_TOCANDO=$(pgrep -a "^$PLAY")
 
 # Identifica corretamente o ID do processo que pertence à música
 ID_MUSICA=${MUSICA_TOCANDO%% *}
@@ -65,11 +64,11 @@ atualizar_statusbar(){
 	"$HOME"/.config/lemonbar/run_lemonbar &
 }
 
+# $1=MUSICA
 player() {
 	[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
 	atualizar_statusbar
-	#$PLAYER $OPTIONS_PLAYER "$1" 2>&1 /dev/null
-	"${PLAYER[@]}" "$1"
+	"${PLAY[@]}" "$1"
 }
 
 player_playlist(){
@@ -113,7 +112,7 @@ tocar_playlist() {
 }
 
 proxima_musica() {
-	pkill -f "^$PLAYER" &
+	pkill -f "^$PLAY" &
 	atualizar_statusbar
 }
 
@@ -125,7 +124,7 @@ musica_anterior() {
 }
 
 eliminar_playlist(){
-   	pkill -f "^$PLAYER|^bash.*${NOME_SCRIPT}$" &
+   	pkill -f "^$PLAY|^bash.*${NOME_SCRIPT}$" &
 	atualizar_statusbar
 }
 

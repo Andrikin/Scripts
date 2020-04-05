@@ -5,8 +5,8 @@
 SEPARADOR='|'
 
 music_playing() {
-	DWM_MOSTRAR_MUSICA=$(pgrep -a "mplayer|ffplay|paplay" | sed "s|.*/||g" 2> /dev/null)
-	[[ $DWM_MOSTRAR_MUSICA != '' ]] && DWM_MOSTRAR_MUSICA="$SEPARADOR  $DWM_MOSTRAR_MUSICA "
+	DWM_MOSTRAR_MUSICA=$(pgrep -a "mplayer|ffplay|paplay")
+	[[ $DWM_MOSTRAR_MUSICA != '' ]] && DWM_MOSTRAR_MUSICA="$SEPARADOR  ${DWM_MOSTRAR_MUSICA##*/} "
 }
 
 date_hour() {
@@ -22,19 +22,24 @@ hd_usage(){
 	DWM_MOSTRAR_USO_HD="$SEPARADOR HD: $(df -h --output=avail | sed -n "4s/[\ ]//gp") "
 }
 
-dwm_ini(){
-	IFS=$'\n'
-	nproc=($(pgrep -f "^bash.*dwm_statusbar$"))
+#dwm_ini(){
+#	IFS=$'\n'
+#	nproc=($(pgrep -f "^bash.*dwm_statusbar$"))
+#}
+#
+#[[ $(pgrep -f "sleep 1m") != '' ]] && pkill -f "sleep 1m"
+#dwm_ini
+#(( ${#nproc[@]} > 1 )) && exit
+
+main(){
+	while true; do
+		music_playing
+		volume_system
+		date_hour
+		hd_usage
+		xsetroot -name "$DWM_MOSTRAR_MUSICA$DWM_MOSTRAR_VOLUME$DWM_MOSTRAR_USO_HD$DWM_MOSTRAR_DATA"
+		sleep 1m
+	done &
 }
 
-[[ $(pgrep -f "sleep 1m") != '' ]] && pkill -f "sleep 1m"
-dwm_ini
-(( ${#nproc[@]} > 1 )) && exit
-while true; do
-	music_playing
-	volume_system
-	date_hour
-	hd_usage
-	xsetroot -name "$DWM_MOSTRAR_MUSICA$DWM_MOSTRAR_VOLUME$DWM_MOSTRAR_USO_HD$DWM_MOSTRAR_DATA"
-	sleep 1m
-done &
+main

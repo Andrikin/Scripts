@@ -1,36 +1,67 @@
 #!/usr/bin/env bash
+
+#TODO - 
+
 #Script para download de videos do youtube
-#TODO -
+
+NOME_SCRIPT="${0##*/}"
+CARACTER_PROIBIDO='\/'
+PASTA_MUSICA="$HOME"/Videos
+PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_video.log
+
+LINK=$(xsel -o -b)
+ID_LINK=video_temp"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")"
+NOME_ARQUIVO=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK")
+
+# Comandos
+DOWNLOAD=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA"/video_temp%(id)s.%(ext)s "$LINK")
+
+call_it_again(){
+	while read TRY_AGAIN
+	do
+		$TRY_AGAIN
+	done < "$PASTA_ERRO_LOG"
+}
+
+remove_current_file(){
+   [[ -f $NOME_ATUAL_ARQUIVO ]] && rm "$NOME_ATUAL_ARQUIVO"
+}
+
+# Verificar se é possível recursividade aqui
+add_link_error_to_file(){
+   printf '%s' "$NOME_SCRIPT $LINK" > "$PASTA_ERRO_LOG"
+   call_it_again
+}
+
+remove_link_error_from_file(){
+	[[ -e $NOME_ATUAL_ARQUIVO ]] && mv "$NOME_ATUAL_ARQUIVO" "$PASTA_MUSICA/${NOME_ARQUIVO//[$CARACTER_PROIBIDO]/}.${NOME_ATUAL_ARQUIVO##*.}"
+	# Por enquanto fica assim: se o LINK estiver na lista, é deletado
+	sed -i "/$LINK/d" "$PASTA_ERRO_LOG"
+}
 
 erro_abortar(){
-   notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $nome_arquivo - Falhou..."
-   [[ ! -f $PASTA_ERRO_LOG ]] && printf '%s\n\n' "LOG DE LINK'S QUE NÃO COMPLETARAM DOWNLOAD:" > "$PASTA_ERRO_LOG"
-   [[ -f $nome_atual_arquivo ]] && rm "$nome_atual_arquivo"
-   num_entrada=$(wc -l < "$PASTA_ERRO_LOG")
-   echo "[$(($num_entrada - 2))] - $link" >> "$PASTA_ERRO_LOG"
+   notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $NOME_ARQUIVO - Falhou..."
+   add_link_error_to_file
 }
 
 sucesso(){
-	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $nome_arquivo - Concluído com Sucesso!"
-	[[ -e $nome_atual_arquivo ]] && mv "$nome_atual_arquivo" "$PASTA_MUSICA/${nome_arquivo//[$CARACTER_PROIBIDO]/}.${nome_atual_arquivo##*.}"
-	# Por enquanto fica assim: se o link estiver na lista, é deletado
-	sed -i "/${id_link/video_temp/}/d" "$PASTA_ERRO_LOG"
+	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $NOME_ARQUIVO - Concluído com Sucesso!"
+	remove_link_error_from_file
 }
 
-trap erro_abortar EXIT
-set -e
+get_name_file(){
+	NOME_ATUAL_ARQUIVO=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$ID_LINK")
+}
 
-CARACTER_PROIBIDO='\/'
-PASTA_MUSICA="$HOME/Videos"
-PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_video.log
-DOWNLOAD_OPTIONS="--no-playlist --youtube-skip-dash-manifest --socket-timeout 60"
+main(){
+	trap erro_abortar EXIT
+	set -e
 
-link=$(xsel -o -b)
-id_link="video_temp$(youtube-dl $DOWNLOAD_OPTIONS --get-id "$link")"
-nome_arquivo=$(youtube-dl $DOWNLOAD_OPTIONS --get-title "$link")
+	"${DOWNLOAD[@]}"
+	get_name_file
+	remove_current_file
 
-youtube-dl -q $DOWNLOAD_OPTIONS --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA/video_temp%(id)s.%(ext)s" "$link"  
+	trap sucesso EXIT
+}
 
-nome_atual_arquivo=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$id_link")
-
-trap sucesso EXIT
+main

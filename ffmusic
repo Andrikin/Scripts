@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+
 # Script player para arquivos de audio
 
 MUSICA="$1"
-PLAYER=(mplayer -really-quiet)
-ID_MUS=$(pgrep -f "^$PLAYER")
+PLAY=(mplayer -really-quiet)
+ID_MUS=$(pgrep -f "^$PLAY")
 
 # Dar update no statusbar
 atualizar_statusbar(){
@@ -12,7 +13,7 @@ atualizar_statusbar(){
 
 play_music(){
 	atualizar_statusbar
-	"${PLAYER[@]}" "$MUSICA"
+	"${PLAY[@]}" "$MUSICA"
 }
 
 main(){
