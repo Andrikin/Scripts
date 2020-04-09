@@ -1,17 +1,36 @@
 #!/usr/bin/env bash
 
-# TODO - Criar um script para fazer download automático de subtitles
+# TODO - Videos podem conter embedded subtiles [como utilizar isto? Arquivos mkv possuem subtitles] [ffplay -vf subtitles=input.mkv:stream_index=2 input.mkv], Criar um script para fazer download automático de subtitles - Utilizar OpenSubtitlesDownload.py!
+# [ffmpeg -i Movie.mkv -map 0:s:0 subs.srt] - retira embbeded subtitle pelo index
 
 # Script para abrir arquivos de vídeo com subtítulos usando ffmpeg
 
-VIDEO="$1"
-ARQUIVO_SRT="${1/${1##*.}/srt}"
-ARQUIVO_TEMP="${1%/*}"/temp.srt
-PLAY=(ffplay -loglevel quiet -autoexit -i)
+init_variables(){
+	VIDEO="$1"
+	ARQUIVO_SRT="${1/${1##*.}/srt}"
+	ARQUIVO_TEMP="${1%/*}"/temp.srt
+	PLAY=(ffplay -loglevel quiet -autoexit -i)
+}
+
+get_subtitle(){
+	OpenSubtitlesDownload.py "$1"
+}
+
+get_file_size(){
+	ARQUIVO_TAMANHO=$(du -h "$1" | cut -f1)
+}
+
+download_subtitle(){
+	get_file_size "$1"
+	if [[ $ARQUIVO_TAMANHO == *G ]] && [[ ! -e $ARQUIVO_SRT ]]
+	then
+		get_subtitle "$1"
+	fi
+}
 
 # Atualiza o status bar
 atualizar_statusbar(){
-	"$HOME"/.config/lemonbar/run_lemonbar &
+	polybar-msg hook music_playing 1
 }
 
 # $1=$ARQUIVO_SRT; $2=$ARQUIVO_TEMP
@@ -27,22 +46,29 @@ to_utf8(){
 	fi
 }
 
-play_video(){
+run_cmd_play(){
 	atualizar_statusbar
 	# Problema com espaço? Sim, comandos que precisam interpretar "espaço" ou outros caracteres precisam ser "quotados"
 	"${PLAY[@]}" "$VIDEO"
 }
 
-main(){
+play(){
 	# Verificar se arquivo srt existe, caso contrário, rodar o vídeo sem
 	if [[ ! -e $ARQUIVO_SRT ]]
 	then
-		play_video
+		run_cmd_play
 	else
 		to_utf8 "$ARQUIVO_SRT" "$ARQUIVO_TEMP"
-		play_video
+		run_cmd_play
 	fi
 	atualizar_statusbar
 }
 
-main
+main(){
+	init_variables "$1"
+	# Download legenda. Se não encontrar, continuar com reprodução do vídeo
+	#download_subtitle "$VIDEO"
+	play
+}
+
+main "$@"

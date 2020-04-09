@@ -1,69 +1,71 @@
 #!/usr/bin/env bash
 
-# TODO - Fazer com que o script tente fazer download dos links que não deram certo..., comando sed para deletar não está funcionando, Fazer um script para download de vídeo ou de audio
+# TODO - Fazer um script para download de vídeo ou de audio, Não é mais necessário o arquivo $PASTA_ERRO_LOG
 
 # Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio do YouTube e converter esse NOME_ARQUIVO para o formato OGG
 
-NOME_SCRIPT="${0##*/}"
-CARACTER_PROIBIDO='\/' # Adicionar mais caracteres que não são interpretados pelo comando "mv"
-PASTA_MUSICA="$HOME"/Música/AudiosYouTube
-PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_audio.log
-
-LINK=$(xsel -o -b)
-NOME_ARQUIVO=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK")
-ID_LINK=audio_temp"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")"
-
-# Comandos
-DOWNLOAD=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.%(ext)s" "$LINK")
-
-call_it_again(){
-	while read TRY_AGAIN
-	do
-		$TRY_AGAIN
-	done < "$PASTA_ERRO_LOG"
+selecting_link(){
+	if [[ $1 != '' ]]
+	then
+		LINK="$1"
+	else
+		LINK=$(xsel -o -b)
+	fi
 }
 
-# Verificar se é possível recursividade aqui
-add_link_error_to_file(){
-   printf '%s' "$NOME_SCRIPT $LINK" > "$PASTA_ERRO_LOG"
-   call_it_again
+init_variables(){
+	NOME_SCRIPT="${1##*/}"
+	CARACTER_PROIBIDO='\/' # Adicionar mais caracteres que não são interpretados pelo comando "mv"
+	PASTA_MUSICA="$HOME"/Música/AudiosYouTube
+
+	selecting_link "$2"
+
+	ARQUIVO_FINAL=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK")
+	ARQUIVO_TEMP="$PASTA_MUSICA"/audio_temp"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")"
+	# Comando youtube-dl
+	DOWNLOAD=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 -f bestaudio -o "$PASTA_MUSICA/audio_temp%(id)s.%(ext)s" "$LINK")
+	FFMPEG_COMMAND=(ffmpeg -i "$ARQUIVO_TEMP".* -q:a 5 "$PASTA_MUSICA/${ARQUIVO_FINAL//[$CARACTER_PROIBIDO]/}".ogg -loglevel quiet)
 }
 
-remove_link_error_from_file(){
-	# Por enquanto fica assim: se o LINK estiver na lista, é deletado
-	sed -i "/$LINK/d" "$PASTA_ERRO_LOG"
-}
-
-erro_abortar(){
-	notify-send -u critical -t 3250 "ERRO!" "Áudio: $NOME_ARQUIVO - Falhou..."
-	add_link_error_to_file
-}
-
-sucesso(){
-	notify-send -t 3250 "SUCESSO!" "Áudio: $NOME_ARQUIVO - Concluído com Sucesso!"
-	remove_link_error_from_file
+try_again_if_error(){
+	((FLAC_LEVEL++))
+	[[ $FLAC_LEVEL -lt 5 ]] && "$NOME_SCRIPT" "$LINK"
 }
 
 run_ffmpeg(){
-	NOME_ATUAL_ARQUIVO=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$ID_LINK")
-	# Quando criar array de comandos, garantir que as variáveis estejam setadas
-	FFMPEG_COMMAND=(ffmpeg -i "$NOME_ATUAL_ARQUIVO" -q:a 5 "$PASTA_MUSICA/${NOME_ARQUIVO//[$CARACTER_PROIBIDO]/}.ogg" -loglevel quiet)
+	# Quando criar array de comandos, garantir que todas variáveis estejam setadas
 	"${FFMPEG_COMMAND[@]}"
 }
 
-remove_current_file(){
-	[[ -f $NOME_ATUAL_ARQUIVO ]] && rm "$NOME_ATUAL_ARQUIVO"
+run_youtube_dl(){
+	"${DOWNLOAD[@]}"
+}
+
+remove_temp_file(){
+	[[ -f $(ls "$ARQUIVO_TEMP".*) ]] && rm "$ARQUIVO_TEMP".*
+}
+
+erro_abortar(){
+	notify-send -u critical -t 3250 "ERRO!" "Áudio: $ARQUIVO_FINAL - Falhou..."
+	remove_temp_file
+	try_again_if_error
+}
+
+sucesso(){
+	notify-send -t 3250 "SUCESSO!" "Áudio: $ARQUIVO_FINAL - Concluído com Sucesso!"
 }
 
 main(){
 	trap erro_abortar EXIT
 	set -e
-
-	"${DOWNLOAD[@]}"
+	# Shell Level
+	FLAC_LEVEL=
+	init_variables "$0" "$1"
+	run_youtube_dl
 	run_ffmpeg
-	remove_current_file
+	remove_temp_file
 
 	trap sucesso EXIT
 }
 
-main
+main "$@"

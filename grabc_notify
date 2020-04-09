@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+main(){
+	notify-send -t 6000 "GRABC" "$(grabc)"
+}
+
+main

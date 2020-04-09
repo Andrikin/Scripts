@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# usage: polybar_volume [+,-]
+
+redraw_polybar(){
+	polybar-msg hook volume 1
+}
+
+change_volume(){
+	case "$1" in
+		up)
+			pactl set-sink-volume 0 +1%
+			;;
+		down)
+			pactl set-sink-volume 0 -1%
+			;;
+	esac
+}
+
+main(){
+	change_volume "$1"
+	redraw_polybar
+}
+
+main "$@"

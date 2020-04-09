@@ -2,8 +2,10 @@
 
 # TODO - 
 
-WIFI_ATUAL="off"
-WIFI_STATUS=$(nmcli -t dev | grep --color=never wifi | cut -d':' -f3)
+init_variables(){
+	WIFI_ATUAL="off"
+	WIFI_STATUS=$(nmcli -t dev | grep --color=never wifi | cut -d':' -f3)
+}
 
 erro(){
 	[[ $ESCOLHER_WIFI != '' ]] && notify-send -u critical --expire-time=3250 "Erro!" "Não foi possível Conexão!"
@@ -24,8 +26,7 @@ verify_wifi(){
 	fi
 }
 
-main(){
-	verify_wifi
+choose_wifi(){
 	ESCOLHER_WIFI=$(nmcli -t device wifi list | cut -d':' -f2 | run_dmenu_command "[$WIFI_ATUAL]")
 	if [[ $ESCOLHER_WIFI != '' ]]; then
 		nmcli device wifi connect "$ESCOLHER_WIFI" password "$(zenity --entry --text="Digite a senha do Wi-Fi:")"
@@ -34,10 +35,13 @@ main(){
 	fi
 }
 
-trap erro EXIT
+main(){
+	trap erro EXIT
+	set -e
+	init_variables
+	verify_wifi
+	choose_wifi
+	trap sucesso EXIT
+}
 
-set -e
-
-main
-
-trap sucesso EXIT
+main "$@"

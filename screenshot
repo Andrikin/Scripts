@@ -2,20 +2,17 @@
 
 # Script para tirar screenshot da tela
 
-NOME_ARQUIVO=screeenshot-$(date '+%d-%b %H:%M').png
-
-read_sleep() {
-    # Usage: read_sleep 1
-    #        read_sleep 0.2
+snore() {
     read -rt "$1" <> <(:) || :
 }
 
 #scrot -q 100 "$HOME/Imagens/screenshot/$NOME_ARQUIVO"
 #import -window root "$HOME/Imagens/screenshot/$NOME_ARQUIVO"
 main(){
+	NOME_ARQUIVO=screeenshot-$(printf "%(%d/%b %H:%M)T\\n").png
+	snore 1
 	xscreenshot | ff2png > "$HOME/Imagens/screenshot/$NOME_ARQUIVO" 
-	read_sleep 1
 	notify-send -t 4000 "Screenshot" "Concluído com Sucesso!"
 }
 
-main
+main "$@"

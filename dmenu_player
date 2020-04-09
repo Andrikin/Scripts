@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO - repeat, Encontrar uma maneira de tirar a atualização do statusbar do dmenu_player
+# TODO - Repeat
 
 # pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
 
@@ -8,42 +8,37 @@
 # Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
-NOME_SCRIPT="${0##*/}"
-DMENU_PASTA="$HOME"/.local/share/"$NOME_SCRIPT"
-MUSICAS_PASTA="$HOME"/Música/
+dmenu_init_variables(){
+	NOME_SCRIPT="${1##*/}"
+	DMENU_PASTA="$HOME"/.local/share/"$NOME_SCRIPT"
+	MUSICAS_PASTA="$HOME"/Música/
 
-# Arquivos usados
-LISTA_DE_MUSICAS="$DMENU_PASTA"/lista_de_musicas_completa.dmenu
-INDICE="$DMENU_PASTA"/indice_playlist.dmenu
-MODULO="$DMENU_PASTA"/modulo.dmenu
-PASTAS_COM_MUSICAS="$DMENU_PASTA"/pastas_de_musicas.dmenu
+	# Arquivos usados
+	LISTA_DE_MUSICAS="$DMENU_PASTA"/lista_de_musicas_completa.dmenu
+	INDICE="$DMENU_PASTA"/indice_playlist.dmenu
+	MODULO="$DMENU_PASTA"/modulo.dmenu
+	PASTAS_COM_MUSICAS="$DMENU_PASTA"/pastas_de_musicas.dmenu
 
-# Keys
-KEY_DMENU_PLAYER_PLAY=p
-KEY_DMENU_PLAYER_STOP=s
-KEY_DMENU_PLAYER_KILL_MUSIC=x
-KEY_DMENU_PLAYER_NEXT=n
-KEY_DMENU_PLAYER_PREVIOUS=b
-KEY_DMENU_PLAYER_QUIT_PLAYLIST=q
+	# Keys
+	KEY_DMENU_PLAYER_PLAY=p
+	KEY_DMENU_PLAYER_STOP=s
+	KEY_DMENU_PLAYER_KILL_MUSIC=x
+	KEY_DMENU_PLAYER_NEXT=n
+	KEY_DMENU_PLAYER_PREVIOUS=b
+	KEY_DMENU_PLAYER_QUIT_PLAYLIST=q
 
-# Fonte dmenu
-#FONT_DMENU="Source Code Pro Medium:size=10"
-#FONT_DMENU_FOREGROUND=#d7d7d7
-#FONT_DMENU_BACKGROUND=#080808
+	# Player utilizado
+	PLAY=(mplayer -really-quiet)
 
-# Player utilizado
-PLAY=(mplayer -really-quiet)
+	# Mostra título da música no Dmenu
+	MUSICA_TOCANDO=$(pgrep -a "^${PLAY[0]}")
 
-# Mostra título da música no Dmenu
-MUSICA_TOCANDO=$(pgrep -a "^$PLAY")
-
-# Identifica corretamente o ID do processo que pertence à música
-ID_MUSICA=${MUSICA_TOCANDO%% *}
+	# Identifica corretamente o ID do processo que pertence à música
+	ID_MUSICA=${MUSICA_TOCANDO%% *}
+}
 
 # $1=MENSAGEM_PROMPT
 run_dmenu_command(){
-	#dmenu -p "$1" -i -f -l "$LINHAS" -fn "$FONT_DMENU" -nb "$FONT_DMENU_BACKGROUND" -nf "$FONT_DMENU_FOREGROUND" -sb "$FONT_DMENU_FOREGROUND" -sf "$FONT_DMENU_BACKGROUND"
-	#dmenu -p "$1" -i -f -l "$LINHAS"
 	dmenu -i -f -l "$LINHAS"
 }
 
@@ -55,24 +50,20 @@ atualizar_listas_de_musicas() {
 	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
 	# Captura todas as pastas dentro da pasta ~/Música/
 	du "$MUSICAS_PASTA"* | cut -f2 > "$PASTAS_COM_MUSICAS"
-	
+
 }
 
 atualizar_statusbar(){
-	#[[ $MUSICA_TOCANDO == '' ]] && pkill -f "sleep 1m" &
-	#pkill -f "sleep 1m" &
-	"$HOME"/.config/lemonbar/run_lemonbar &
+	polybar-msg hook music_playing 1
 }
 
 # $1=MUSICA
 player() {
-	[[ $ID_MUSICA != '' ]] && kill "$ID_MUSICA"
 	atualizar_statusbar
 	"${PLAY[@]}" "$1"
 }
 
 player_playlist(){
-	#local musicas=($(sort -R < <(printf '%s\n' "$@")))
 	local musicas=("$@")
 	echo '0' > "$INDICE"
 	while (( $(< "$INDICE") <= ${#musicas[@]} )); do
@@ -112,23 +103,22 @@ tocar_playlist() {
 }
 
 proxima_musica() {
-	pkill -f "^$PLAY" &
+	pkill -f "^${PLAY[0]}" &
 	atualizar_statusbar
 }
 
 musica_anterior() {
 	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
-	# printf "%string" aceita somente números naturais
 	echo "$(($(< "$INDICE") - 2))" > "$INDICE"
 	proxima_musica
 }
 
 eliminar_playlist(){
-   	pkill -f "^$PLAY|^bash.*${NOME_SCRIPT}$" &
+	pkill -f "^${PLAY[0]}|^bash.*${NOME_SCRIPT}$" &
 	atualizar_statusbar
 }
 
-dmenu_init(){
+dmenu_init_files(){
 	# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
 	[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
 }
@@ -157,41 +147,59 @@ dmenu_lines(){
 
 dmenu_main_menu(){
 	MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | run_dmenu_command "Escolha uma das opçoes:")
-
 	[[ $MAIN_MENU == '' ]] && exit
 }
 
 dmenu_init_modules(){
-	dmenu_init
+	dmenu_init_variables "$1"
+	dmenu_init_files
 	dmenu_options
 	dmenu_lines
 	dmenu_main_menu
 }
 
 main(){
-	dmenu_init_modules
+	dmenu_init_modules "$0"
 
 	# Controle das ações do dmenu_player
 	case "${MAIN_MENU:1:1}" in
 		# Procurar Música
-		1) tocar_musica;;
+		1) 
+			tocar_musica
+		;;
 		# Tocar Músicas de Pasta
-		2) tocar_playlist;;
+		2) 
+			tocar_playlist
+		;;
 		# Atualizar Lista de Músicas
-		3) atualizar_listas_de_musicas;;
+		3) 
+			atualizar_listas_de_musicas
+		;;
 		# Play
-		$KEY_DMENU_PLAYER_PLAY) kill -cont "$ID_MUSICA";;
+		$KEY_DMENU_PLAYER_PLAY) 
+			kill -cont "$ID_MUSICA"
+		;;
 		# Stop
-		$KEY_DMENU_PLAYER_STOP) kill -stop "$ID_MUSICA";;
+		$KEY_DMENU_PLAYER_STOP) 
+			kill -stop "$ID_MUSICA"
+		;;
 		# Encerra playlist
-		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) eliminar_playlist;;
+		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) 
+			eliminar_playlist
+		;;
 		# Next/Eliminar a música atual
-		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) proxima_musica;;
+		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) 
+			proxima_musica
+		;;
 		# Previous
-		$KEY_DMENU_PLAYER_PREVIOUS) musica_anterior;;
+		$KEY_DMENU_PLAYER_PREVIOUS) 
+			musica_anterior
+		;;
 		# Default
-		*) notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit;;
-	esac
+		*) 
+			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit
+		;;
+esac
 }
 
-main
+main "$@"

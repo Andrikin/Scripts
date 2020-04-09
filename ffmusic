@@ -2,13 +2,15 @@
 
 # Script player para arquivos de audio
 
-MUSICA="$1"
-PLAY=(mplayer -really-quiet)
-ID_MUS=$(pgrep -f "^$PLAY")
+init_variables(){
+	MUSICA="$1"
+	PLAY=(mplayer -really-quiet)
+	ID_MUS=$(pgrep -f "^$PLAY")
+}
 
 # Dar update no statusbar
 atualizar_statusbar(){
-	"$HOME"/.config/lemonbar/run_lemonbar &
+	polybar-msg hook music_playing 1
 }
 
 play_music(){
@@ -17,9 +19,10 @@ play_music(){
 }
 
 main(){
+	init_variables "$1"
 	[[ $ID_MUS != '' ]] && kill "$ID_MUS"
 	play_music
 	atualizar_statusbar
 }
 
-main
+main "$@"

@@ -1,67 +1,71 @@
 #!/usr/bin/env bash
 
-#TODO - 
+# TODO - Refazer, em um script, youtube-flac e youtube-video
 
 #Script para download de videos do youtube
 
-NOME_SCRIPT="${0##*/}"
-CARACTER_PROIBIDO='\/'
-PASTA_MUSICA="$HOME"/Videos
-PASTA_ERRO_LOG="$PASTA_MUSICA"/.links_erro_video.log
-
-LINK=$(xsel -o -b)
-ID_LINK=video_temp"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")"
-NOME_ARQUIVO=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK")
-
-# Comandos
-DOWNLOAD=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA"/video_temp%(id)s.%(ext)s "$LINK")
-
-call_it_again(){
-	while read TRY_AGAIN
-	do
-		$TRY_AGAIN
-	done < "$PASTA_ERRO_LOG"
+selecting_link(){
+	if [[ $1 != '' ]]
+	then
+		LINK="$1"
+	else
+		LINK=$(xsel -o -b)
+	fi
 }
 
-remove_current_file(){
-   [[ -f $NOME_ATUAL_ARQUIVO ]] && rm "$NOME_ATUAL_ARQUIVO"
+init_variables(){
+	NOME_SCRIPT="${1##*/}"
+	CARACTER_PROIBIDO='\/'
+	PASTA_MUSICA="$HOME"/Videos
+
+	selecting_link "$2"
+
+	ARQUIVO_TEMP="$PASTA_MUSICA"/video_temp"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")"
+	ARQUIVO_FINAL=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK")
+	DOWNLOAD=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_MUSICA/video_temp%(id)s.%(ext)s" "$LINK")
 }
 
-# Verificar se é possível recursividade aqui
-add_link_error_to_file(){
-   printf '%s' "$NOME_SCRIPT $LINK" > "$PASTA_ERRO_LOG"
-   call_it_again
+try_again_if_error(){
+	((FLAC_LEVEL++))
+	[[ $FLAC_LEVEL -lt 5 ]] && "$NOME_SCRIPT" "$LINK"
 }
 
-remove_link_error_from_file(){
-	[[ -e $NOME_ATUAL_ARQUIVO ]] && mv "$NOME_ATUAL_ARQUIVO" "$PASTA_MUSICA/${NOME_ARQUIVO//[$CARACTER_PROIBIDO]/}.${NOME_ATUAL_ARQUIVO##*.}"
-	# Por enquanto fica assim: se o LINK estiver na lista, é deletado
-	sed -i "/$LINK/d" "$PASTA_ERRO_LOG"
+remove_temp_file(){
+	[[ -f $ARQUIVO_TEMP ]] && rm "$ARQUIVO_TEMP"
+}
+
+rename_file(){
+	[[ -e $ARQUIVO_TEMP ]] && mv "$ARQUIVO_TEMP" "$PASTA_MUSICA/${ARQUIVO_FINAL//[$CARACTER_PROIBIDO]/}.${ARQUIVO_EXTENCAO##*.}"
+}
+
+# Comando principal
+run_youtube_dl(){
+	"${DOWNLOAD[@]}"
+	ARQUIVO_EXTENCAO=$(ls "$ARQUIVO_TEMP".*)
+	ARQUIVO_TEMP="$ARQUIVO_EXTENCAO"
 }
 
 erro_abortar(){
-   notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $NOME_ARQUIVO - Falhou..."
-   add_link_error_to_file
+	notify-send -u critical --expire-time=3250 "ERRO!" "Vídeo: $ARQUIVO_FINAL - Falhou..."
+	remove_temp_file
+	try_again_if_error
 }
 
 sucesso(){
-	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $NOME_ARQUIVO - Concluído com Sucesso!"
-	remove_link_error_from_file
-}
-
-get_name_file(){
-	NOME_ATUAL_ARQUIVO=$(ls "$PASTA_MUSICA"/*.* | grep --color=never "$ID_LINK")
+	notify-send --expire-time=3250 "SUCESSO!" "Vídeo: $ARQUIVO_FINAL - Concluído com Sucesso!"
+	rename_file
 }
 
 main(){
 	trap erro_abortar EXIT
 	set -e
 
-	"${DOWNLOAD[@]}"
-	get_name_file
-	remove_current_file
+	# Shell Level
+	FLAC_LEVEL=
+	init_variables "$0" "$1"
+	run_youtube_dl
 
 	trap sucesso EXIT
 }
 
-main
+main "$@"
