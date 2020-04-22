@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+# TODO - Refazer todo o script de forma coerente
+
+# Script que utiliza os pacotes youtube-dl e ffmpeg para baixar audio/video do YouTube 
+
+init_variables(){
+	NOME_SCRIPT="${1##*/}"
+	CARACTER_PROIBIDO='\/' # Adicionar mais caracteres que não são interpretados pelo comando "mv"
+	NOTIFY_TIME=6000
+	PASTA_MUSICA="$HOME"/Música/AudiosYouTube
+	PASTA_VIDEO="$HOME"/Videos
+
+	# $2=LINK $3=ARQUIVO_FINAL $4=ARQUIVO_TEMP
+	selecting_variables "$2" "$3" "$4"
+
+
+	ERROR_MESSAGE="Módulo: init_variables"
+}
+
+run_ffmpeg(){
+	local FFMPEG_COMMAND=(ffmpeg -loglevel quiet -i "$ARQUIVO_TEMP" -q:a 5 "$PASTA_MUSICA/${ARQUIVO_FINAL//[$CARACTER_PROIBIDO]/}".ogg)
+	"${FFMPEG_COMMAND[@]}"
+
+	ERROR_MESSAGE="Módulo: run_ffmpeg"
+}
+
+run_command_audio(){
+	local DOWNLOAD_AUDIO=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 -f "bestaudio" -o "$PASTA_MUSICA/temp_%(id)s.%(ext)s" "$LINK")
+	"${DOWNLOAD_AUDIO[@]}"
+	#ERROR_MESSAGE="Módulo: run_command_audio DOWNLOAD_AUDIO"
+	ARQUIVO_TEMP=$(ls "$PASTA_MUSICA/$ARQUIVO_TEMP".*)
+	run_ffmpeg
+	#ERROR_MESSAGE="Módulo: run_command_audio run_ffmpeg"
+	set_final_operation "audio"
+
+	ERROR_MESSAGE="Módulo: run_command_audio set_final_operation"
+}
+
+run_command_video(){
+	local DOWNLOAD_VIDEO=(youtube-dl -q --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --hls-prefer-native -f "[height<=720]" -o "$PASTA_VIDEO/temp_%(id)s.%(ext)s" "$LINK")
+	"${DOWNLOAD_VIDEO[@]}"
+	ARQUIVO_TEMP=$(ls "$PASTA_VIDEO/$ARQUIVO_TEMP".*)
+	set_final_operation "video"
+
+	ERROR_MESSAGE="Módulo: run_command_video"
+}
+
+run_dmenu_command(){
+	dmenu -i -f -l 3
+
+	ERROR_MESSAGE="Módulo: run_dmenu_command"
+}
+
+# $1=LINK $2=ARQUIVO_FINAL $3=ARQUIVO_TEMP
+selecting_variables(){
+	if [[ $1 != '' ]]
+	then
+		LINK="$1"
+	else
+		LINK=$(xsel -o -b)
+	fi
+
+	[[ $2 != '' ]] && ARQUIVO_FINAL=$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-title "$LINK") || 
+		ARQUIVO_FINAL="$2"
+	[[ $3 != '' ]] && ARQUIVO_TEMP=temp_"$(youtube-dl --no-playlist --youtube-skip-dash-manifest --socket-timeout 60 --get-id "$LINK")" ||
+		ARQUIVO_TEMP="$3"
+
+	ERROR_MESSAGE="Módulo: selecting_variables"
+}
+
+remove_temp_file(){
+	[[ -e $ARQUIVO_TEMP ]] && rm "$ARQUIVO_TEMP"
+
+	ERROR_MESSAGE="Módulo: remove_temp_file"
+}
+
+rename_file(){
+	[[ -e $ARQUIVO_TEMP ]] && mv "$ARQUIVO_TEMP" "$PASTA_VIDEO/${ARQUIVO_FINAL//[$CARACTER_PROIBIDO]/}.${ARQUIVO_TEMP##*.}"
+
+	ERROR_MESSAGE="Módulo: rename_file"
+}
+
+try_again_if_error(){
+	((FLAC_LEVEL++))
+	[[ $FLAC_LEVEL -lt 5 ]] && "$NOME_SCRIPT" "$LINK" "$ARQUIVO_FINAL" "$ARQUIVO_TEMP"
+}
+
+set_final_operation(){
+	case "$1" in
+		audio)
+			remove_temp_file
+			;;
+		video)
+			rename_file
+			;;
+	esac
+
+	ERROR_MESSAGE="Módulo: set_final_operation"
+}
+
+choosing_audio_or_video(){
+	case "${OPTION:1:1}" in
+		1)
+			run_command_audio
+			;;
+		2)
+			run_command_video
+			;;
+	esac
+}
+
+# Definindo variáveis para download
+downloading(){
+	local ESCOLHER_DOWNLOAD=("[1] Baixar audio" "[2] Baixar video")
+	OPTION=$(printf "%s\n" "Escolha uma das opções:" "${ESCOLHER_DOWNLOAD[@]}" | run_dmenu_command)
+
+	choosing_audio_or_video
+
+	ERROR_MESSAGE="Módulo: downloading"
+}
+
+error_abort(){
+	notify-send -u critical -t "$NOTIFY_TIME" "ERRO!" "Arquivo: $ARQUIVO_FINAL - Falhou... $ERROR_MESSAGE"
+	# Remover o arquivo temp
+	set_final_operation "audio"
+	# Melhorar como irá acontecer a recursão
+	try_again_if_error
+}
+
+sucess(){
+	notify-send -t "$NOTIFY_TIME" "SUCESSO!" "Arquivo: $ARQUIVO_FINAL - Concluído com Sucesso!"
+}
+
+main(){
+	trap error_abort EXIT
+	set -e
+	# Shell Level para controlar método "try_again_if_error"
+	FLAC_LEVEL=
+	init_variables "$0" "$1" "$2" "$3"
+	downloading
+
+	trap sucess EXIT
+}
+
+main "$@"

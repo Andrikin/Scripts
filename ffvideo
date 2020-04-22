@@ -13,11 +13,26 @@ init_variables(){
 }
 
 get_subtitle(){
-	OpenSubtitlesDownload.py "$1"
+	OpenSubtitlesDownload.py "$1" || true
 }
 
 get_file_size(){
 	ARQUIVO_TAMANHO=$(du -h "$1" | cut -f1)
+}
+
+notify_sucess(){
+	local time=7000
+	case "$1" in
+		0)
+			notify-send -t "$time" "FFVIDEO" "[Sucesso]: Legenda baixada com sucesso!"
+			;;
+		1)
+			notify-send -t "$time" "FFVIDEO" "[Sucesso]: Porém legenda não encontrada!"
+			;;
+		2)
+			notify-send -u critical -t "$time" "FFVIDEO" "Falha!"
+			;;
+	esac
 }
 
 download_subtitle(){
@@ -25,6 +40,8 @@ download_subtitle(){
 	if [[ $ARQUIVO_TAMANHO == *G ]] && [[ ! -e $ARQUIVO_SRT ]]
 	then
 		get_subtitle "$1"
+		# Notify_sucess deve verificar o comando OpenSubtitlesDownload
+		#notify_sucess "$?"
 	fi
 }
 
@@ -67,7 +84,8 @@ play(){
 main(){
 	init_variables "$1"
 	# Download legenda. Se não encontrar, continuar com reprodução do vídeo
-	#download_subtitle "$VIDEO"
+	download_subtitle "$VIDEO"
+	#[[ $? != 2 ]] && play || notify-send -u critical -t 7000 "FFVIDEO" "Não foi possível baixar legenda para o filme"
 	play
 }
 

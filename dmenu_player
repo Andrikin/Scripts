@@ -39,15 +39,16 @@ dmenu_init_variables(){
 
 # $1=MENSAGEM_PROMPT
 run_dmenu_command(){
+	dmenu_lines
 	dmenu -i -f -l "$LINHAS"
 }
 
 
 # Função que atualiza o arquivo das músicas
 atualizar_listas_de_musicas() {
-	local ARQUIVOS_BUSCA=".flac\|.mp3\|.ogg\|.oga"
+	local buscar=".flac\|.mp3\|.ogg\|.oga"
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $ARQUIVOS_BUSCA > "$LISTA_DE_MUSICAS"
+	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never $buscar > "$LISTA_DE_MUSICAS"
 	# Captura todas as pastas dentro da pasta ~/Música/
 	du "$MUSICAS_PASTA"* | cut -f2 > "$PASTAS_COM_MUSICAS"
 
@@ -79,8 +80,8 @@ tocar_musica() {
 	echo '1' > "$MODULO"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
 	local IFS=$'\n'
-	local todas_musicas=($(< "$LISTA_DE_MUSICAS"))
-	local musica_escolhida=$(printf '%s\n' "${todas_musicas[@]##*/}" | shuf | run_dmenu_command "Escolha uma música:")
+	local todas_musicas=($(shuf < "$LISTA_DE_MUSICAS"))
+	local musica_escolhida=$(printf '%s\n' "Escolha uma música:" "${todas_musicas[@]##*/}" | run_dmenu_command)
 	# Se não for escolhida nenhuma música, encerrar o script
 	[[ $musica_escolhida = '' ]] && exit
 	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
@@ -93,8 +94,8 @@ tocar_playlist() {
 	# Registrando módulo
 	echo '2' > "$MODULO"
 	local IFS=$'\n'
-	local pastas=($(< "$PASTAS_COM_MUSICAS"))
-	local escolher_playlist=$(printf '%s\n' "${pastas[@]##*/}" | shuf | run_dmenu_command "Escolha uma das opçoes:")
+	local pastas=($(shuf < "$PASTAS_COM_MUSICAS"))
+	local escolher_playlist=$(printf '%s\n' "Escolha uma das pastas de música:" "${pastas[@]##*/}" | run_dmenu_command)
 	# Se nenhuma playlist for escolhida, encerrar o script
 	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $escolher_playlist" || exit
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
@@ -118,7 +119,7 @@ eliminar_playlist(){
 	atualizar_statusbar
 }
 
-dmenu_init_files(){
+init_files(){
 	# Criando arquivo que conterá todas as músicas da pasta /home/andre/Música - Primeira operação realizada
 	[[ ! -e "$LISTA_DE_MUSICAS" ]] && atualizar_listas_de_musicas
 }
@@ -131,7 +132,7 @@ dmenu_options(){
 		# Dmenu's diferentes para "playlist" e música "solo"
 		case "$(< "$MODULO")" in
 			1)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
-			*)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+			2)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
 		esac
 	fi
 }
@@ -146,20 +147,9 @@ dmenu_lines(){
 }
 
 dmenu_main_menu(){
-	MAIN_MENU=$(printf '%s\n' "${MENU_DMENU[@]}" | run_dmenu_command "Escolha uma das opçoes:")
-	[[ $MAIN_MENU == '' ]] && exit
-}
-
-dmenu_init_modules(){
-	dmenu_init_variables "$1"
-	dmenu_init_files
 	dmenu_options
-	dmenu_lines
-	dmenu_main_menu
-}
-
-main(){
-	dmenu_init_modules "$0"
+	MAIN_MENU=$(printf '%s\n' "Escolha uma das opçoes:" "${MENU_DMENU[@]}" | run_dmenu_command)
+	[[ $MAIN_MENU == '' ]] && exit
 
 	# Controle das ações do dmenu_player
 	case "${MAIN_MENU:1:1}" in
@@ -200,6 +190,12 @@ main(){
 			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit
 		;;
 esac
+}
+
+main(){
+	dmenu_init_variables "$0"
+	init_files
+	dmenu_main_menu
 }
 
 main "$@"
