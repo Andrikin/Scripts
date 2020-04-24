@@ -7,13 +7,13 @@
 
 init_variables(){
 	VIDEO="$1"
+	ARQUIVO="${1%.*}"
 	ARQUIVO_SRT="${1/${1##*.}/srt}"
-	ARQUIVO_TEMP="${1%/*}"/temp.srt
 	PLAY=(ffplay -loglevel quiet -autoexit -i)
 }
 
 get_subtitle(){
-	OpenSubtitlesDownload.py "$1" || true
+	OpenSubtitlesDownload.py "$1" && notify_sucess "$?" || true
 }
 
 get_file_size(){
@@ -40,8 +40,7 @@ download_subtitle(){
 	if [[ $ARQUIVO_TAMANHO == *G ]] && [[ ! -e $ARQUIVO_SRT ]]
 	then
 		get_subtitle "$1"
-		# Notify_sucess deve verificar o comando OpenSubtitlesDownload
-		#notify_sucess "$?"
+		to_utf8 "$ARQUIVO"
 	fi
 }
 
@@ -50,17 +49,20 @@ atualizar_statusbar(){
 	polybar-msg hook music_playing 1
 }
 
-# $1=$ARQUIVO_SRT; $2=$ARQUIVO_TEMP
+# $1=$ARQUIVO
 # Verifica a codificação do arquivo .srt e converter para UTF-8
 to_utf8(){
-	PLAY+=(-vf subtitles="$1")
-	local char_code=$(chardet3 "$1" | sed "s/^.*:\ //g" | cut -d' ' -f1)
+	local sub_file=$(ls "$1".{sub,srt,ass,idx,ssa,vtt,ttml} 2> /dev/null) #|| return 0
+	local temp_file="$1-temp.${sub_file##*.}"
+	local char_code=$(chardet3 "$sub_file" | sed "s/^.*:\ //g" | cut -d' ' -f1)
 
 	if [[ $char_code != utf-8 ]]
 	then
-	   iconv -f "$char_code" -t UTF-8 "$1" -o "$2"
-	   [[ -e $2 ]] && rm "$1" && mv "$2" "$1"
+		iconv -f "$char_code" -t UTF-8 "$sub_file" -o "$temp_file"
+		[[ $sub_file != *.srt ]] && ffmpeg -i "$temp_file" "$1".srt 
 	fi
+	[[ -e $temp_file ]] && rm "$sub_file"
+	[[ -e $1.srt ]] && rm "$temp_file" || mv "$temp_file" "$1".srt
 }
 
 run_cmd_play(){
@@ -75,7 +77,7 @@ play(){
 	then
 		run_cmd_play
 	else
-		to_utf8 "$ARQUIVO_SRT" "$ARQUIVO_TEMP"
+		PLAY+=(-vf subtitles="$ARQUIVO_SRT")
 		run_cmd_play
 	fi
 	atualizar_statusbar
@@ -85,7 +87,6 @@ main(){
 	init_variables "$1"
 	# Download legenda. Se não encontrar, continuar com reprodução do vídeo
 	download_subtitle "$VIDEO"
-	#[[ $? != 2 ]] && play || notify-send -u critical -t 7000 "FFVIDEO" "Não foi possível baixar legenda para o filme"
 	play
 }
 
