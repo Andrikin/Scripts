@@ -4,7 +4,6 @@
 
 # pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
 
-# Utiliza Mplayer, fonte Google Source Code Pro Medium, scripts para atualizar statusbar [lemonbar]
 # Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
@@ -66,10 +65,18 @@ player() {
 
 player_playlist(){
 	local musicas=("$@")
+	local num=0
 	echo '0' > "$INDICE"
-	while (( $(< "$INDICE") <= ${#musicas[@]} )); do
-		player "${musicas[$(< "$INDICE")]}"
-		echo "$(($(< "$INDICE") + 1))" > "$INDICE"
+	while (( $num <= ${#musicas[@]} ))
+   	do
+		player "${musicas[$num]}"
+
+		if [[ $(< "$INDICE") == 0 ]]
+		then
+			((num++))
+		else
+			((num--))
+		fi
 	done
 	atualizar_statusbar
 }
@@ -83,7 +90,7 @@ tocar_musica() {
 	local todas_musicas=($(shuf < "$LISTA_DE_MUSICAS"))
 	local musica_escolhida=$(printf '%s\n' "Escolha uma música:" "${todas_musicas[@]##*/}" | run_dmenu_command)
 	# Se não for escolhida nenhuma música, encerrar o script
-	[[ $musica_escolhida = '' ]] && exit
+	[[ $musica_escolhida = '' ]] && exit 0
 	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
 	player "$musica"
 	atualizar_statusbar
@@ -97,21 +104,21 @@ tocar_playlist() {
 	local pastas=($(shuf < "$PASTAS_COM_MUSICAS"))
 	local escolher_playlist=$(printf '%s\n' "Escolha uma das pastas de música:" "${pastas[@]##*/}" | run_dmenu_command)
 	# Se nenhuma playlist for escolhida, encerrar o script
-	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $escolher_playlist" || exit
+	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $escolher_playlist" || exit 0
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
 	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{oga,ogg,flac,mp3} 2> /dev/null | shuf))
 	player_playlist "${musicas_da_pasta[@]}"
 }
 
-proxima_musica() {
+parar_musica(){
 	pkill -f "^${PLAY[0]}" &
-	atualizar_statusbar
 }
 
-musica_anterior() {
-	# O que acontece quando o índice é negativo? Como em Python, assumem valores no final do array, sentido contrário
-	echo "$(($(< "$INDICE") - 2))" > "$INDICE"
-	proxima_musica
+# 0=PROXIMA MÚSICA; 1=MÚSICA ANTERIOR
+tracking_musica(){
+	[[ $(< "$INDICE") != $1 ]] && echo "$1" > "$INDICE"
+	parar_musica
+	atualizar_statusbar
 }
 
 eliminar_playlist(){
@@ -126,7 +133,8 @@ init_files(){
 
 dmenu_options(){
 	# Opções do Dmenu
-	if [[ $MUSICA_TOCANDO == '' ]]; then
+	if [[ $MUSICA_TOCANDO == '' ]]
+   	then
 		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
 	else
 		# Dmenu's diferentes para "playlist" e música "solo"
@@ -139,7 +147,8 @@ dmenu_options(){
 
 dmenu_lines(){
 	# Número de "entradas" do menu - Dmenu
-	if [[ ${#MENU_DMENU[@]} -lt 5 ]]; then
+	if [[ ${#MENU_DMENU[@]} -lt 5 ]]
+   	then
 		LINHAS=5
 	else
 		LINHAS="${#MENU_DMENU[@]}"
@@ -149,7 +158,7 @@ dmenu_lines(){
 dmenu_main_menu(){
 	dmenu_options
 	MAIN_MENU=$(printf '%s\n' "Escolha uma das opçoes:" "${MENU_DMENU[@]}" | run_dmenu_command)
-	[[ $MAIN_MENU == '' ]] && exit
+	[[ $MAIN_MENU == '' ]] && exit 0
 
 	# Controle das ações do dmenu_player
 	case "${MAIN_MENU:1:1}" in
@@ -179,15 +188,15 @@ dmenu_main_menu(){
 		;;
 		# Next/Eliminar a música atual
 		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) 
-			proxima_musica
+			tracking_musica "0"
 		;;
 		# Previous
 		$KEY_DMENU_PLAYER_PREVIOUS) 
-			musica_anterior
+			tracking_musica "1"
 		;;
 		# Default
 		*) 
-			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit
+			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit 0
 		;;
 esac
 }
@@ -198,4 +207,4 @@ main(){
 	dmenu_main_menu
 }
 
-main "$@"
+main

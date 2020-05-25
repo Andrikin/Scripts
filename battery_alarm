@@ -4,22 +4,19 @@
 
 # Script para avisar quando a fonte desconectar ou parar de carregar
 
-read_sleep() {
+snore() {
     # Usage: read_sleep 1
     #        read_sleep 0.2
-    read -rt "$1" <> <(:) || :
+    read -rt "$1" <> <(true) || true
 }
 
-#init_battery(){
-#	local IFS=$'\n'
-#	nproc=($(pgrep -f "^bash.*battery_alarm$"))
-#	[[ $? == 0 ]] && echo "${#nproc[@]}" || echo "0"
-#}
+main(){
+	while true; do
+		if [[ $(< /sys/class/power_supply/BAT0/status) == Discharging ]]; then
+			notify-send -u critical -t 2000 "Aviso!" "Fonte está DESCONECTADA!"
+		fi
+		snore 1
+	done
+}
 
-#(( $(init_battery) > 1 )) && exit
-while true; do
-	if [[ $(< /sys/class/power_supply/BAT0/status) == Discharging ]]; then
-		notify-send -u critical -t 2000 "Aviso!" "Fonte está DESCONECTADA!"
-	fi
-	read_sleep 1
-done
+main

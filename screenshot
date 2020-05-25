@@ -3,16 +3,49 @@
 # Script para tirar screenshot da tela
 
 snore() {
-    read -rt "$1" <> <(:) || :
+    read -rt "$1" <> <(true) || true
+}
+
+notify_sucess(){
+	if [[ $? == 0 ]]
+	then
+		notify-send -t 7000 "SCREENSHOT" "Concluído com Sucesso!"
+	else
+		notify-send -u critical -t 7000 "SCREENSHOT" "Erro: Comando resultou em falha!"
+	fi
 }
 
 #scrot -q 100 "$HOME/Imagens/screenshot/$NOME_ARQUIVO"
 #import -window root "$HOME/Imagens/screenshot/$NOME_ARQUIVO"
-main(){
-	NOME_ARQUIVO=screeenshot-$(printf "%(%d/%b %H:%M)T\\n").png
+full_screen(){
 	snore 1
 	xscreenshot | ff2png > "$HOME/Imagens/screenshot/$NOME_ARQUIVO" 
-	notify-send -t 4000 "Screenshot" "Concluído com Sucesso!"
+	notify_sucess
 }
 
-main "$@"
+grab_screen(){
+	# import "$HOME/Imagens/screenshot/$NOME_ARQUIVO"
+	scrot -s -q 100 "$HOME/Imagens/screenshot/$NOME_ARQUIVO" 
+	notify_sucess
+}
+
+choosing_option(){
+	case "${option:1:1}" in
+		1)
+			full_screen
+			;;
+		2)
+			grab_screen
+			;;
+		*)
+			notify-send -u critical -t 7000 "SCREENSHOT" "Erro: Comando inválido!"
+	esac
+}
+
+main(){
+	NOME_ARQUIVO=screeenshot-$(printf "%(%d-%b %H:%M)T\\n").png
+	option=$(printf "%s\n" "Escolha uma das opções:" "[1] Tela inteira" "[2] Tela selecionada" | dmenu -i -f -l 3)
+	choosing_option
+}
+
+main
