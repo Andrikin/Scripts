@@ -63,10 +63,14 @@ player() {
 	"${PLAY[@]}" "$1"
 }
 
+reset_playlist_indice(){
+	echo '0' > "$INDICE"
+}
+
 player_playlist(){
 	local musicas=("$@")
 	local num=0
-	echo '0' > "$INDICE"
+	reset_playlist_indice
 	while (( $num <= ${#musicas[@]} ))
    	do
 		player "${musicas[$num]}"
@@ -76,9 +80,9 @@ player_playlist(){
 			((num++))
 		else
 			((num--))
+			reset_playlist_indice
 		fi
 	done
-	atualizar_statusbar
 }
 
 tocar_musica() {
@@ -89,8 +93,10 @@ tocar_musica() {
 	local IFS=$'\n'
 	local todas_musicas=($(shuf < "$LISTA_DE_MUSICAS"))
 	local musica_escolhida=$(printf '%s\n' "Escolha uma música:" "${todas_musicas[@]##*/}" | run_dmenu_command)
+
 	# Se não for escolhida nenhuma música, encerrar o script
 	[[ $musica_escolhida = '' ]] && exit 0
+
 	local musica=$(grep --color=never "$musica_escolhida$" "$LISTA_DE_MUSICAS")
 	player "$musica"
 	atualizar_statusbar
@@ -103,11 +109,14 @@ tocar_playlist() {
 	local IFS=$'\n'
 	local pastas=($(shuf < "$PASTAS_COM_MUSICAS"))
 	local escolher_playlist=$(printf '%s\n' "Escolha uma das pastas de música:" "${pastas[@]##*/}" | run_dmenu_command)
+
 	# Se nenhuma playlist for escolhida, encerrar o script
 	[[ $escolher_playlist != '' ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $escolher_playlist" || exit 0
+
 	local caminho_completo_pasta=$(grep --color=never "$escolher_playlist$" "$PASTAS_COM_MUSICAS")
 	local musicas_da_pasta=($(ls "$caminho_completo_pasta"/*.{oga,ogg,flac,mp3} 2> /dev/null | shuf))
 	player_playlist "${musicas_da_pasta[@]}"
+	atualizar_statusbar
 }
 
 parar_musica(){
