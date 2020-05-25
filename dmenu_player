@@ -148,15 +148,19 @@ dmenu_options(){
 	else
 		# Dmenu's diferentes para "playlist" e música "solo"
 		case "$(< "$MODULO")" in
-			1)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
-			2)MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]");;
+			1)
+				MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]")
+				;;
+			2)
+				MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]" "[] - [Playing: \"${MUSICA_TOCANDO##*/}\"]")
+				;;
 		esac
 	fi
 }
 
 dmenu_lines(){
 	# Número de "entradas" do menu - Dmenu
-	if [[ ${#MENU_DMENU[@]} -lt 5 ]]
+	if (( ${#MENU_DMENU[@]} < 5 ))
    	then
 		LINHAS=5
 	else

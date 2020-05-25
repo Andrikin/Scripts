@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-# TODO - Videos podem conter embedded subtiles [como utilizar isto? Arquivos mkv possuem subtitles] [ffplay -vf subtitles=input.mkv:stream_index=2 input.mkv], Criar um script para fazer download automático de subtitles - Utilizar OpenSubtitlesDownload.py!
+# TODO - Videos podem conter embedded subtiles [como utilizar isto? Arquivos mkv possuem subtitles] [ffplay -vf subtitles=input.mkv:stream_index=2 input.mkv], Criar um script para fazer download automático de subtitles; Utilizar OpenSubtitlesDownload.py!
 # Quando o nome da pasta contém [], falha a reprodução do vídeo. Solução: remover []
 # [ffmpeg -i Movie.mkv -map 0:s:0 subs.srt] - retira embbeded subtitle pelo index
+# Utilizando uchardet (C++) para detectar file encoding
 
 # Script para abrir arquivos de vídeo com subtítulos usando ffmpeg
 
@@ -15,28 +16,11 @@ init_variables(){
 
 get_subtitle(){
 	OpenSubtitlesDownload.py "$1" || true
-	#OpenSubtitlesDownload.py "$1" && notify_sucess "$?" || true
 }
 
 get_file_size(){
 	ARQUIVO_TAMANHO=$(du -h "$1" | cut -f1)
 }
-
-# Não funciona quando o código != de 0. Estranho, pois o OpenSubtitlesDownload garante sinais de saída para diferentes situações
-# notify_sucess(){
-# 	local time=7000
-# 	case "$1" in
-# 		0)
-# 			notify-send -t "$time" "FFVIDEO" "[Sucesso]: Legenda baixada com sucesso!"
-# 			;;
-# 		1)
-# 			notify-send -t "$time" "FFVIDEO" "[Sucesso]: Porém legenda não encontrada!"
-# 			;;
-# 		2)
-# 			notify-send -u critical -t "$time" "FFVIDEO" "Falha!"
-# 			;;
-# 	esac
-# }
 
 download_subtitle(){
 	get_file_size "$1"
@@ -59,11 +43,11 @@ atualizar_statusbar(){
 # Verifica a codificação do arquivo .srt e converter para UTF-8
 to_utf8(){
 	local sub_file=$(ls "$1".{sub,srt,ass,idx,ssa,vtt,ttml} 2> /dev/null) #|| return 0
-	local char_code=$(chardet3 "$sub_file" | sed "s/^.*:\ //g" | cut -d' ' -f1)
+	local char_code=$(uchardet "$sub_file")
 
 	if [[ $char_code != utf-8 ]]
 	then
-		local temp_file=$1-temp.${sub_file##*.}
+		local temp_file="$1-temp.${sub_file##*.}"
 		iconv -f "$char_code" -t UTF-8 "$sub_file" -o "$temp_file"
 		[[ $sub_file != *.srt ]] && ffmpeg -i "$temp_file" "$1".srt && rm "$temp_file" "$sub_file" 
 		[[ -e $temp_file ]] && rm "$sub_file" && mv "$temp_file" "$1".srt
