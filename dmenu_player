@@ -117,20 +117,21 @@ playlist_queue(){
 	atualizar_statusbar
 }
 
-parar_musica(){
-	pkill -f "^${PLAY[0]}" &
+# $1=WHAT_TO_KILL
+process_kill(){
+	if [[ $1 == music ]]
+	then
+		pkill -f "^${PLAY[0]}" &
+	else
+		pkill -f "^${PLAY[0]}|^bash.*${NOME_SCRIPT}$" &
+	fi
+	atualizar_statusbar
 }
 
-# 0=PROXIMA MÚSICA; 1=MÚSICA ANTERIOR
-tracking_musica(){
+# next=PROXIMA MÚSICA; previous=MÚSICA ANTERIOR
+tracking_music(){
 	[[ $(< "$INDICE") != $1 ]] && echo "$1" > "$INDICE"
-	parar_musica
-	atualizar_statusbar
-}
-
-eliminar_playlist(){
-	pkill -f "^${PLAY[0]}|^bash.*${NOME_SCRIPT}$" &
-	atualizar_statusbar
+	process_kill "music"
 }
 
 init_files(){
@@ -173,43 +174,43 @@ dmenu_main_menu(){
 
 	# Controle das ações do dmenu_player
 	case "${MAIN_MENU:1:1}" in
-		# Procurar Música
+		# Toca somente uma  música
 		1) 
 			playlist_queue "$LISTA_DE_MUSICAS" "1"
-		;;
-		# Tocar Músicas de Pasta
+			;;
+		# Toca músicas de uma pasta
 		2) 
 			playlist_queue "$PASTAS_COM_MUSICAS" "2"
-		;;
-		# Atualizar Lista de Músicas
+			;;
+		# Atualiza a lista de músicas
 		3) 
 			atualizar_listas_de_musicas
-		;;
+			;;
 		# Play
 		$KEY_DMENU_PLAYER_PLAY) 
 			kill -cont "$ID_MUSICA"
-		;;
+			;;
 		# Stop
 		$KEY_DMENU_PLAYER_STOP) 
 			kill -stop "$ID_MUSICA"
-		;;
+			;;
 		# Encerra playlist
 		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) 
-			eliminar_playlist
-		;;
+			process_kill "script"
+			;;
 		# Next/Eliminar a música atual
 		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) 
-			tracking_musica "next"
-		;;
+			tracking_music "next"
+			;;
 		# Previous
 		$KEY_DMENU_PLAYER_PREVIOUS) 
-			tracking_musica "previous"
-		;;
+			tracking_music "previous"
+			;;
 		# Default
 		*) 
 			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit 0
-		;;
-esac
+			;;
+	esac
 }
 
 main(){
