@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
-# Simple Image Viewer
+# Simple Image Viewer - Abre também outros arquivos de imagem que estejam na mesma pasta
 
-PWD_ARQUIVO=$(realpath "$1")
+remove_file_from_array(){
+	ARQUIVOS_PASTA=()
+	for ((i=0;i<${#temp[@]};i++))
+	do
+		if [[ $ARQUIVO != ${temp[$i]} ]]
+		then
+			ARQUIVOS_PASTA+=("${temp[$i]}")
+		fi
+	done
+}
 
-[[ -f $1 ]] && sxiv -qfa "$1" "${PWD_ARQUIVO%/*}" || sxiv -qtfa "$1"
+main(){
+	ARQUIVO="$1"
+	temp=("${ARQUIVO%/*}"/*.*)
+
+	remove_file_from_array
+
+
+	[[ -f $1 ]] && sxiv -qfa "$1" "${ARQUIVOS_PASTA[@]}" || sxiv -qtfa "$1"
+}
+
+main "$@"
