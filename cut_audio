@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+# TODO - Refazer lógica para calcular TIME 
+
+calculate_time(){
+	time_calculated=0
+	time=(${1//:/ })
+	for ((i=0;i<${#time[@]};i++))
+	do
+		case "$i" in
+			# 0)
+			# 	time_calculated=$((time_calculated + (time[i]*3600)))
+			# 	;;
+			0)
+				time_calculated=$((time_calculated + (time[i]*60)))
+				;;
+			1)
+				time_calculated=$((time_calculated + time[i]))
+				;;
+		esac
+	done
+	echo "$time_calculated"
+}
+
+# $1=OPTION; $2=STRING_MESSAGE
+exit_error(){
+	error_message="Trim_audio: error: $1 invalid $2"
+	echo "$error_message"
+	exit 0
+}
+
+# O objetivo do while junto com shift é "gastar" todos os argumentos do script, obtendo assim os valores que serão usados no script
+get_opts(){
+	usage_message="Usage: -h|--help -i|--input INPUT -b|--begin TIME_BEGIN -t|--to-time TIME_END"
+	while (( $# ))
+	do
+		case "$1" in
+			-h|--help)
+				echo "$usage_message"
+				exit 0
+				;;
+			-i|--input)
+				shift
+				if [[ $1 != -* ]]
+				then
+					audio_file="$1"
+				else
+					exit_error "$1" "parameter"
+				fi
+				shift
+				;;
+			-b|--begin)
+				shift
+				time_begin=$(calculate_time "$1")
+				shift
+				;;
+			-t|--to-time)
+				shift
+				if [[ $1 != -* ]]
+				then
+					time_end=$(calculate_time "$3")
+				else
+					exit_error "$1" "parameter"
+				fi
+				shift
+				;;
+			*)
+				exit_error "$1" "command"
+				;;
+		esac
+	done
+}
+
+main(){
+	# sox "$1" "$temp_file" trim "$2" "$3"
+	time_begin=0
+	get_opts "$@"
+	temp_file=temp_file."${audio_file##*.}"
+	ffmpeg -ss "$time_begin" -i "$audio_file" -t "$time_end" -c copy "$temp_file"
+	[[ -e $temp_file ]] && rm "$audio_file" && mv "$temp_file" "$audio_file"
+}
+
+main "$@"
