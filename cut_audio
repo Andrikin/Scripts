@@ -1,23 +1,13 @@
 #!/usr/bin/env bash
 
-# TODO - Refazer lógica para calcular TIME 
+# TODO - 
 
 calculate_time(){
 	time_calculated=0
 	time=(${1//:/ })
-	for ((i=0;i<${#time[@]};i++))
+	for ((i=${#time[@]};i>0;i--))
 	do
-		case "$i" in
-			# 0)
-			# 	time_calculated=$((time_calculated + (time[i]*3600)))
-			# 	;;
-			0)
-				time_calculated=$((time_calculated + (time[i]*60)))
-				;;
-			1)
-				time_calculated=$((time_calculated + time[i]))
-				;;
-		esac
+		time_calculated=$((time_calculated + (time[i-1] * (60**(${#time[@]}-i)))))
 	done
 	echo "$time_calculated"
 }
@@ -58,7 +48,7 @@ get_opts(){
 				shift
 				if [[ $1 != -* ]]
 				then
-					time_end=$(calculate_time "$3")
+					time_end=$(calculate_time "$1")
 				else
 					exit_error "$1" "parameter"
 				fi
