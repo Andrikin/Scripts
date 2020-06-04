@@ -23,10 +23,10 @@ exit_error(){
 get_opts(){
 	usage_message="Usage: -h|--help -i|--input INPUT -b|--begin TIME_BEGIN -t|--to-time TIME_END
 
-	-h| --help		:Show help message
-	-i| --input		:Input file url
-	-b| --begin		:Initial time track for the input file
-	-t| --to-time	:End time for the input file"
+	-h, --help		:Show help message
+	-i, --input		:Input file url
+	-b, --begin		:Initial time track for the input file. Default value is 0.
+	-t, --to-time	:End time for the input file"
 	while (( $# ))
 	do
 		case "$1" in
@@ -67,11 +67,11 @@ get_opts(){
 }
 
 main(){
-	# sox "$1" "$temp_file" trim "$2" "$3"
+	# sox "$1" "$temp_file" trim "$2" "$3" - comando não tem suporte para alguns formatos
 	time_begin=0
 	get_opts "$@"
 	temp_file=temp_file."${audio_file##*.}"
-	ffmpeg -ss "$time_begin" -i "$audio_file" -t "$time_end" -c copy "$temp_file"
+	ffmpeg -loglevel quiet -ss "$time_begin" -i "$audio_file" -t "$time_end" -c copy "$temp_file"
 	[[ -e $temp_file ]] && rm "$audio_file" && mv "$temp_file" "$audio_file"
 }
 
