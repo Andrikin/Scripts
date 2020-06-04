@@ -15,13 +15,18 @@ calculate_time(){
 # $1=OPTION; $2=STRING_MESSAGE
 exit_error(){
 	error_message="Trim_audio: error: $1 invalid $2"
-	echo "$error_message"
+	printf '%s\n' "$error_message"
 	exit 0
 }
 
 # O objetivo do while junto com shift é "gastar" todos os argumentos do script, obtendo assim os valores que serão usados no script
 get_opts(){
-	usage_message="Usage: -h|--help -i|--input INPUT -b|--begin TIME_BEGIN -t|--to-time TIME_END"
+	usage_message="Usage: -h|--help -i|--input INPUT -b|--begin TIME_BEGIN -t|--to-time TIME_END
+
+	-h| --help		:Show help message
+	-i| --input		:Input file url
+	-b| --begin		:Initial time track for the input file
+	-t| --to-time	:End time for the input file"
 	while (( $# ))
 	do
 		case "$1" in
