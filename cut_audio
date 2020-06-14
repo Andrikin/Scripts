@@ -3,11 +3,11 @@
 # TODO - 
 
 calculate_time(){
-	time_calculated=0
-	time=(${1//:/ })
+	local time_calculated=0
+	local time=(${1//:/ })
 	for ((i=${#time[@]};i>0;i--))
 	do
-		time_calculated=$((time_calculated + (time[i-1] * (60**(${#time[@]}-i)))))
+		time_calculated=$((time_calculated + ($(expr "${time[$i-1]}" + 0) * (60**(${#time[@]}-i)))))
 	done
 	echo "$time_calculated"
 }
@@ -23,10 +23,11 @@ exit_error(){
 get_opts(){
 	usage_message="Usage: -h|--help -i|--input INPUT -b|--begin TIME_BEGIN -t|--to-time TIME_END
 
-	-h, --help		:Show help message
-	-i, --input		:Input file url
-	-b, --begin		:Initial time track for the input file. Default value is 0.
-	-t, --to-time		:End time for the input file"
+-h, --help		:Show help message
+-i, --input		:Input file url
+-b, --begin		:Initial time track for the input file. Default value is 0.
+-t, --to-time		:End time for the input file
+"
 	while (( $# ))
 	do
 		case "$1" in
