@@ -131,9 +131,7 @@ dmenu_options(){
 	if [[ -z $MUSIC_PLAYING ]]
    	then
 		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
-		MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
 	else
-		MENU_DMENU_ROWS=10
 		if (( $(< "$MODULO") ))
 		then
 			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]") # "[] - [Playing: \"${MUSIC_PLAYING##*/}\"]")
@@ -141,6 +139,7 @@ dmenu_options(){
 			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]") # "[] - [Playing: \"${MUSIC_PLAYING##*/}\"]")
 		fi
 	fi
+	MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
 }
 
 dmenu_main_menu(){
