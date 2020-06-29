@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO - Repeat, encontrar um jeito de retirar a variável MUSIC_PLAYING 
+# TODO - Encontrar um jeito de retirar a variável MUSIC_PLAYING 
 
 # pacmd set-sink-mute alsa_output.pci-0000_00_1b.0.analog-stereo 1 (mute)
 
@@ -15,9 +15,11 @@ init_variables(){
 	IS_NEXT_SONG="$DMENU_PASTA/is_next_song.dmenu"
 	MODULO="$DMENU_PASTA/modulo.dmenu"
 	PASTAS_COM_MUSICAS="$DMENU_PASTA/pastas_de_musicas.dmenu"
+	REPEAT="$DMENU_PASTA/repeat.dmenu"
 	# Keys
 	KEY_DMENU_PLAYER_PLAY=p
 	KEY_DMENU_PLAYER_STOP=s
+	KEY_DMENU_PLAYER_REPEAT=r
 	KEY_DMENU_PLAYER_KILL_MUSIC=x
 	KEY_DMENU_PLAYER_NEXT=n
 	KEY_DMENU_PLAYER_PREVIOUS=b
@@ -44,6 +46,10 @@ redraw_statusbar(){
 player() {
 	redraw_statusbar
 	"${PLAY[@]}" "$1"
+	while (( $(< "$REPEAT") ))
+	do
+		"${PLAY[@]}" "$1"
+	done
 }
 
 reset_to_next_song(){
@@ -67,11 +73,16 @@ player_playlist(){
 		fi
 	done
 }
+toggle_repeat(){
+	((i=$(< "$REPEAT")>0?0:1)) 
+	echo "$i" > "$REPEAT"
+}
 
 # $1=ARQUIVO_LISTA; $2=MÓDULO
 playlist_queue(){
 	MENU_DMENU_ROWS=10
 	echo "$2" > "$MODULO"
+	echo "0" > "$REPEAT"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
 	local IFS=$'\n'
 	local songs_list=($(shuf < "$1"))
@@ -134,10 +145,14 @@ dmenu_options(){
 	else
 		if (( $(< "$MODULO") ))
 		then
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]") # "[] - [Playing: \"${MUSIC_PLAYING##*/}\"]")
+			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]")
 		else
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]") # "[] - [Playing: \"${MUSIC_PLAYING##*/}\"]")
+			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]")
 		fi
+	fi
+	if (($(< "$REPEAT")))
+	then
+		MENU_DMENU+=("Repeating Song!")
 	fi
 	MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
 }
@@ -166,6 +181,9 @@ dmenu_main_menu(){
 		# Stop
 		$KEY_DMENU_PLAYER_STOP) 
 			kill -stop "$ID_MUSICA"
+			;;
+		$KEY_DMENU_PLAYER_REPEAT) 
+			toggle_repeat
 			;;
 		# Encerra playlist
 		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) 
