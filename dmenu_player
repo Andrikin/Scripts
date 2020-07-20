@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# TODO - Play e Stop tem o mesmo comportamento, fazer mais interações com mplayer em estado "slave" 
+# TODO - Fazer mais interações com mplayer em estado "slave" 
 
-# Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/).
+# Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/)
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
 init_variables(){
@@ -36,6 +36,7 @@ update_songs_list() {
 
 redraw_statusbar(){
 	polybar-msg hook music_playing 1
+	# polybar-msg hook music_status 1
 }
 
 # $1=MUSICA
@@ -50,6 +51,7 @@ player() {
 
 pause_song(){
 	echo "pause" > "$CMD_FIFO_FILE"
+	polybar-msg hook music_status 1
 }
 
 reset_to_next_song(){
@@ -134,7 +136,7 @@ init_files(){
 }
 
 run_dmenu(){
-	dmenu -i -f -l "$MENU_DMENU_ROWS" -fn "Source Code Pro Medium:size=15"
+	dmenu -i -f -l "$MENU_DMENU_ROWS" -fn "Source Code Pro Medium:size=14"
 }
 
 dmenu_command_menu(){
@@ -148,9 +150,9 @@ dmenu_options(){
 	else
 		if (( $(< "$MODULO") ))
 		then
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]")
+			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY/$KEY_DMENU_PLAYER_STOP] - [Play!/Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]")
 		else
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY] - [Play!]" "[$KEY_DMENU_PLAYER_STOP] - [Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]")
+			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY/$KEY_DMENU_PLAYER_STOP] - [Play!/Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]")
 		fi
 	fi
 	if (($(< "$REPEAT")))
