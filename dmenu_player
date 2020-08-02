@@ -17,6 +17,7 @@ init_variables(){
 	MODULO="$DMENU_PASTA/modulo.dmenu"
 	PASTAS_COM_MUSICAS="$DMENU_PASTA/pastas_de_musicas.dmenu"
 	REPEAT="$DMENU_PASTA/repeat.dmenu"
+	PAUSED="$DMENU_PASTA/paused.dmenu"
 	# Keys
 	KEY_DMENU_PLAYER_PLAY=p
 	KEY_DMENU_PLAYER_STOP=s
@@ -36,7 +37,6 @@ update_songs_list() {
 
 redraw_statusbar(){
 	polybar-msg hook music_playing 1
-	# polybar-msg hook music_status 1
 }
 
 # $1=MUSICA
@@ -51,7 +51,7 @@ player() {
 
 pause_song(){
 	echo "pause" > "$CMD_FIFO_FILE"
-	polybar-msg hook music_status 1
+	toggle_paused
 }
 
 reset_to_next_song(){
@@ -79,6 +79,13 @@ player_playlist(){
 toggle_repeat(){
 	((i=$(< "$REPEAT")>0?0:1)) 
 	echo "$i" > "$REPEAT"
+	redraw_statusbar
+}
+
+toggle_paused(){
+	((i=$(< "$PAUSED")>0?0:1)) 
+	echo "$i" > "$PAUSED"
+	redraw_statusbar
 }
 
 # $1=ARQUIVO_LISTA; $2=MÓDULO
@@ -155,10 +162,6 @@ dmenu_options(){
 			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY/$KEY_DMENU_PLAYER_STOP] - [Play!/Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]")
 		fi
 	fi
-	if (($(< "$REPEAT")))
-	then
-		MENU_DMENU+=("REPEATING SONG!")
-	fi
 	MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
 }
 
@@ -168,32 +171,23 @@ dmenu_main_menu(){
 	[[ -z $MAIN_MENU ]] && exit 0
 	case "${MAIN_MENU:1:1}" in
 		1) 
-			playlist_queue "$LISTA_DE_MUSICAS" "1"
-			;;
+			playlist_queue "$LISTA_DE_MUSICAS" "1";;
 		2) 
-			playlist_queue "$PASTAS_COM_MUSICAS" "0"
-			;;
+			playlist_queue "$PASTAS_COM_MUSICAS" "0";;
 		3) 
-			update_songs_list
-			;;
+			update_songs_list;;
 		$KEY_DMENU_PLAYER_PLAY|$KEY_DMENU_PLAYER_STOP) 
-			pause_song
-			;;
+			pause_song;;
 		$KEY_DMENU_PLAYER_REPEAT) 
-			toggle_repeat
-			;;
+			toggle_repeat;;
 		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) 
-			process_kill "0"
-			;;
+			process_kill "0";;
 		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) 
-			tracking_music "1"
-			;;
+			tracking_music "1";;
 		$KEY_DMENU_PLAYER_PREVIOUS) 
-			tracking_music "0"
-			;;
+			tracking_music "0";;
 		*) 
-			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit 0
-			;;
+			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit 0;;
 	esac
 }
 
