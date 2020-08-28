@@ -88,6 +88,12 @@ toggle_paused(){
 	redraw_statusbar
 }
 
+reset_statusbar(){
+	echo '0' > "$REPEAT"
+	echo '0' > "$PAUSED"
+	redraw_statusbar
+}
+
 # $1=ARQUIVO_LISTA; $2=MÓDULO
 playlist_queue(){
 	MENU_DMENU_ROWS=10
@@ -124,13 +130,13 @@ process_kill(){
 	else
 		pkill -f "^${PLAY[0]}|^bash.*${NOME_SCRIPT}$" &
 	fi
-	redraw_statusbar
+	reset_statusbar
 }
 
 # 1=PROXIMA MÚSICA; 0=MÚSICA ANTERIOR
 # kill song
 tracking_music(){
-	echo "0" > "$REPEAT"
+	reset_statusbar
 	[[ $(< "$IS_NEXT_SONG") != $1 ]] && echo "$1" > "$IS_NEXT_SONG"
 	process_kill "1"
 }
