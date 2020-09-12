@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 
 main(){
-	printf '%s\n' "Escolha um dos comandos:" "${DMENU_PATH_LIST:-"$(dmenu_path)"}" | dmenu -i -f -l 6 | ${SHELL:-"/bin/bash"}
+	local IFS=$'\n'
+	CACHE_DIR=${XDG_CACHE_HOME:-"$HOME/.cache"}
+	if [[ -e $CACHE_DIR/dmenu_run ]]
+	then
+		DMENU_COMMAND_LIST=$(< "$CACHE_DIR/dmenu_run")
+	else
+		DMENU_COMMAND_LIST=$(dmenu_path)
+	fi
+	printf '%s\n' "Escolha um dos comandos:" "$DMENU_COMMAND_LIST" | dmenu -i -f -l 6 -fn "Source Code Pro Medium:size=14" | ${SHELL:-"/bin/bash"}
 }
 
 main

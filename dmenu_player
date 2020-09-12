@@ -5,34 +5,32 @@
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
 
 init_variables(){
-	NOME_SCRIPT="${1##*/}"
-	DMENU_PASTA="$HOME/.local/share/$NOME_SCRIPT"
-	MUSICAS_PASTA="$HOME/Música/"
+	SCRIPT_NAME=$(basename "$BASH_ARGV0")
 	CMD_FIFO_FILE="/tmp/mplayer-fifo"
 	PLAY=(mplayer -really-quiet -quiet -slave -input file="$CMD_FIFO_FILE")
-	MUSIC_PLAYING=$(pgrep -a "^${PLAY[0]}")
 	# Arquivos usados
-	LISTA_DE_MUSICAS="$DMENU_PASTA/lista_de_musicas_completa.dmenu"
-	IS_NEXT_SONG="$DMENU_PASTA/is_next_song.dmenu"
-	MODULO="$DMENU_PASTA/modulo.dmenu"
-	PASTAS_COM_MUSICAS="$DMENU_PASTA/pastas_de_musicas.dmenu"
-	REPEAT="$DMENU_PASTA/repeat.dmenu"
-	PAUSED="$DMENU_PASTA/paused.dmenu"
+	DMENU_PATH="$HOME/.local/share/$SCRIPT_NAME"
+	MUSIC_LIST="$DMENU_PATH/lista_de_musicas_completa.dmenu"
+	IS_NEXT_SONG="$DMENU_PATH/is_next_song.dmenu"
+	MODULO="$DMENU_PATH/modulo.dmenu"
+	MUSIC_PATHS="$DMENU_PATH/pastas_de_musicas.dmenu"
+	REPEAT="$DMENU_PATH/repeat.dmenu"
+	PAUSED="$DMENU_PATH/paused.dmenu"
 	# Keys
-	KEY_DMENU_PLAYER_PLAY=p
-	KEY_DMENU_PLAYER_STOP=s
-	KEY_DMENU_PLAYER_REPEAT=r
-	KEY_DMENU_PLAYER_KILL_MUSIC=x
-	KEY_DMENU_PLAYER_NEXT=n
-	KEY_DMENU_PLAYER_PREVIOUS=b
-	KEY_DMENU_PLAYER_QUIT_PLAYLIST=q
+	KEY_PLAY=p
+	KEY_STOP=s
+	KEY_REPEAT=r
+	KEY_KILL_MUSIC=x
+	KEY_NEXT=n
+	KEY_PREVIOUS=b
+	KEY_PLAYLIST=q
 }
 
 update_songs_list() {
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	du -a "$MUSICAS_PASTA" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$LISTA_DE_MUSICAS"
+	du -a "${MUSIC_DIR:-"$HOME/Música/"}" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$MUSIC_LIST"
 	# Captura todas as pastas dentro da pasta ~/Música/
-	du "$MUSICAS_PASTA"* | cut -f2 > "$PASTAS_COM_MUSICAS"
+	du "$MUSIC_DIR"* | cut -f2 > "$MUSIC_PATHS"
 }
 
 redraw_statusbar(){
@@ -114,8 +112,8 @@ playlist_queue(){
 	else
 		choose=$(dmenu_command_menu "Escolha uma das pastas de música:" "${songs_list[@]##*/}")
 		# Se nenhuma playlist for escolhida, encerrar o script
-		[[ -n $choose ]] && notify-send -t 6000 "${NOME_SCRIPT^^}" "Escutando músicas da pasta: $choose" || exit 0
-		songs+=($(shuf < <(grep --color=never "$choose/" "$LISTA_DE_MUSICAS")))
+		[[ -n $choose ]] && notify-send -t 6000 "${SCRIPT_NAME^^}" "Escutando músicas da pasta: $choose" || exit 0
+		songs+=($(shuf < <(grep --color=never "$choose/" "$MUSIC_LIST")))
 		player_playlist "${songs[@]}"
 	fi
 	redraw_statusbar
@@ -128,7 +126,7 @@ process_kill(){
 	then
 		pkill -f "^${PLAY[0]}" &
 	else
-		pkill -f "^${PLAY[0]}|^bash.*${NOME_SCRIPT}$" &
+		pkill -f "^${PLAY[0]}|^bash.*${SCRIPT_NAME}$" &
 	fi
 	reset_statusbar
 }
@@ -144,8 +142,8 @@ tracking_music(){
 init_files(){
 	# Criando arquivo e diretórios
 	[[ ! -p "$CMD_FIFO_FILE" ]] && mkfifo "$CMD_FIFO_FILE"
-	[[ ! -d $DMENU_PASTA ]] && mkdir "$DMENU_PASTA"
-	[[ ! -e "$LISTA_DE_MUSICAS" ]] && update_songs_list
+	[[ ! -d $DMENU_PATH ]] && mkdir "$DMENU_PATH"
+	[[ ! -e "$MUSIC_LIST" ]] && update_songs_list
 }
 
 run_dmenu(){
@@ -157,15 +155,15 @@ dmenu_command_menu(){
 }
 
 dmenu_options(){
-	if [[ -z $MUSIC_PLAYING ]]
+	if [[ -z ${MUSIC_PLAYING:-$(pgrep -a "^${PLAY[0]}")} ]]
    	then
 		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
 	else
 		if (( $(< "$MODULO") ))
 		then
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY/$KEY_DMENU_PLAYER_STOP] - [Play!/Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_KILL_MUSIC] - [Parar Música!]")
+			MENU_DMENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" "[$KEY_REPEAT] - [Repeat!]" "[$KEY_KILL_MUSIC] - [Parar Música!]")
 		else
-			MENU_DMENU=("[$KEY_DMENU_PLAYER_PLAY/$KEY_DMENU_PLAYER_STOP] - [Play!/Stop!]" "[$KEY_DMENU_PLAYER_REPEAT] - [Repeat!]" "[$KEY_DMENU_PLAYER_NEXT] - [Próxima Música!]" "[$KEY_DMENU_PLAYER_PREVIOUS] - [Música Anterior!]" "[$KEY_DMENU_PLAYER_QUIT_PLAYLIST] - [Encerrar Playlist!]")
+			MENU_DMENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" "[$KEY_REPEAT] - [Repeat!]" "[$KEY_NEXT] - [Próxima Música!]" "[$KEY_PREVIOUS] - [Música Anterior!]" "[$KEY_PLAYLIST] - [Encerrar Playlist!]")
 		fi
 	fi
 	MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
@@ -173,27 +171,27 @@ dmenu_options(){
 
 dmenu_main_menu(){
 	dmenu_options
-	MAIN_MENU=$(dmenu_command_menu "${NOME_SCRIPT^^} - MENU:" "${MENU_DMENU[@]}")
+	MAIN_MENU=$(dmenu_command_menu "${SCRIPT_NAME^^} - MENU:" "${MENU_DMENU[@]}")
 	[[ -z $MAIN_MENU ]] && exit 0
 	case "${MAIN_MENU:1:1}" in
-		1) 
-			playlist_queue "$LISTA_DE_MUSICAS" "1";;
-		2) 
-			playlist_queue "$PASTAS_COM_MUSICAS" "0";;
-		3) 
+		(1) 
+			playlist_queue "$MUSIC_LIST" "1";;
+		(2) 
+			playlist_queue "$MUSIC_PATHS" "0";;
+		(3) 
 			update_songs_list;;
-		$KEY_DMENU_PLAYER_PLAY|$KEY_DMENU_PLAYER_STOP) 
+		($KEY_PLAY|$KEY_STOP) 
 			pause_song;;
-		$KEY_DMENU_PLAYER_REPEAT) 
+		($KEY_REPEAT) 
 			toggle_repeat;;
-		$KEY_DMENU_PLAYER_QUIT_PLAYLIST) 
+		($KEY_PLAYLIST) 
 			process_kill "0";;
-		$KEY_DMENU_PLAYER_KILL_MUSIC|$KEY_DMENU_PLAYER_NEXT) 
+		($KEY_KILL_MUSIC|$KEY_NEXT) 
 			tracking_music "1";;
-		$KEY_DMENU_PLAYER_PREVIOUS) 
+		($KEY_PREVIOUS) 
 			tracking_music "0";;
-		*) 
-			notify-send -u critical -t 3250 "${NOME_SCRIPT^^}" "Comando não reconhecido!" & exit 0;;
+		(*) 
+			notify-send -u critical -t 3250 "${SCRIPT_NAME^^}" "Comando não reconhecido!" & exit 0;;
 	esac
 }
 
