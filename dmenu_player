@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: Verify if this variables are script local only
+# TODO:
 
 # Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/)
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
@@ -28,8 +28,9 @@ init_variables(){
 }
 
 update_songs_list() {
+	local MUSIC_DIR="$HOME/Música/"
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	du -a "${MUSIC_DIR:="$HOME/Música/"}" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$MUSIC_LIST"
+	du -a "$MUSIC_DIR" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$MUSIC_LIST"
 	# Captura todas as pastas dentro da pasta ~/Música/
 	du "$MUSIC_DIR"* | cut -f2 > "$MUSIC_PATHS"
 }
@@ -91,7 +92,7 @@ reset_statusbar(){
 playlist_queue(){
 	PLAYER_MENU_ROWS=10
 	echo "$2" > "$MODULO"
-	echo "0" > "$REPEAT"
+	echo '0' > "$REPEAT"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
 	local IFS=$'\n'
 	local songs_list=($(shuf < "$1"))
