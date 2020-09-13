@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# $1=VALOR $2=ARQUIVO_SRT
+error_message(){
+	local message="Itsoffset_srt: error: $1 invalid command"
+	echo "$message"
+}
+
+get_opts(){
+	local usage_message=(
+			"Usage: -h|--help -i|--input SRT_FILE -t|--time OFFSET_TIME_VALUE" \
+			"-h, --help		:Show help message" \
+			"-i, --input		:Input file url (should be a srt file)" \
+			"-t, --time		:Offset time value to correct srt file timestamp. Number can be negative or positive" \
+			)
+	while (( $# ))
+	do
+		case "$1" in
+			(-h|--help)
+				printf "%s\n" "${usage_message[@]}"
+				return
+				;;
+			(-i|--input)
+				shift
+				if [[ $1 != -* ]]
+				then
+					srt_file="$1"
+				else
+					error_message "$1"
+					return
+				fi
+				shift
+				;;
+			(-t|--time)
+				shift
+				if [[ $1 != -[a-zA-Z]* ]] || [[ $1 != [a-zA-Z]* ]]
+				then
+					time_offset="$1"
+				else
+					error_message "$1"
+					return
+				fi
+				shift
+				;;
+			(*)
+				echo "Error: $1 invalid command"
+				return
+				;;
+		esac
+	done
+}
+
+main(){
+	get_opts "$@"
+	local srt_temp_file="${srt_file/${srt_file##*.}/-out.srt}"
+	ffmpeg -loglevel quiet -itsoffset "$time_offset" -i "$srt_file" "$srt_temp_file"
+	[[ -e $srt_temp_file ]] && rm "$srt_file" && mv "$srt_temp_file" "$srt_file"
+}
+
+main "$@"

@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# TODO - Fazer mais interações com mplayer em estado "slave" 
+# TODO: Verify if this variables are script local only
 
 # Dmenu_player cria um menu interativo para busca e interação básica com arquivos de música (dentro da pasta ~/Música/)
 # Músicas que tenham o mesmo nome irão entrar em conflito , não tocando nenhuma delas - SOLUÇÃO renomear de forma diferente ;P
+# Utiliza dmenu modificado com patches
 
 init_variables(){
 	SCRIPT_NAME=$(basename "$BASH_ARGV0")
 	CMD_FIFO_FILE="/tmp/mplayer-fifo"
 	PLAY=(mplayer -really-quiet -quiet -slave -input file="$CMD_FIFO_FILE")
 	# Arquivos usados
-	DMENU_PATH="$HOME/.local/share/$SCRIPT_NAME"
-	MUSIC_LIST="$DMENU_PATH/lista_de_musicas_completa.dmenu"
-	IS_NEXT_SONG="$DMENU_PATH/is_next_song.dmenu"
-	MODULO="$DMENU_PATH/modulo.dmenu"
-	MUSIC_PATHS="$DMENU_PATH/pastas_de_musicas.dmenu"
-	REPEAT="$DMENU_PATH/repeat.dmenu"
-	PAUSED="$DMENU_PATH/paused.dmenu"
+	PLAYER_DIR="$HOME/.local/share/$SCRIPT_NAME"
+	MUSIC_LIST="$PLAYER_DIR/lista_de_musicas_completa.dmenu"
+	IS_NEXT_SONG="$PLAYER_DIR/is_next_song.dmenu"
+	MODULO="$PLAYER_DIR/modulo.dmenu"
+	MUSIC_PATHS="$PLAYER_DIR/pastas_de_musicas.dmenu"
+	REPEAT="$PLAYER_DIR/repeat.dmenu"
+	PAUSED="$PLAYER_DIR/paused.dmenu"
 	# Keys
 	KEY_PLAY=p
 	KEY_STOP=s
@@ -28,7 +29,7 @@ init_variables(){
 
 update_songs_list() {
 	# Captura todas as músicas nos formatos flac, ogg, mp3
-	du -a "${MUSIC_DIR:-"$HOME/Música/"}" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$MUSIC_LIST"
+	du -a "${MUSIC_DIR:="$HOME/Música/"}" | cut -f2 | grep --color=never ".flac\|.mp3\|.ogg\|.oga" > "$MUSIC_LIST"
 	# Captura todas as pastas dentro da pasta ~/Música/
 	du "$MUSIC_DIR"* | cut -f2 > "$MUSIC_PATHS"
 }
@@ -49,7 +50,7 @@ player() {
 
 pause_song(){
 	echo "pause" > "$CMD_FIFO_FILE"
-	toggle_paused
+	toggle "$PAUSED"
 }
 
 reset_to_next_song(){
@@ -74,15 +75,9 @@ player_playlist(){
 	done
 }
 
-toggle_repeat(){
-	((i=$(< "$REPEAT")>0?0:1)) 
-	echo "$i" > "$REPEAT"
-	redraw_statusbar
-}
-
-toggle_paused(){
-	((i=$(< "$PAUSED")>0?0:1)) 
-	echo "$i" > "$PAUSED"
+toggle(){
+	((i=$(< "$1")>0?0:1))
+	echo "$i" > "$1"
 	redraw_statusbar
 }
 
@@ -94,7 +89,7 @@ reset_statusbar(){
 
 # $1=ARQUIVO_LISTA; $2=MÓDULO
 playlist_queue(){
-	MENU_DMENU_ROWS=10
+	PLAYER_MENU_ROWS=10
 	echo "$2" > "$MODULO"
 	echo "0" > "$REPEAT"
 	# Sempre observar a necessidade de usar IFS (valor padrão <space><tab><newline>) quando criar listas de comandos
@@ -104,13 +99,13 @@ playlist_queue(){
 	local songs=()
 	if (( $2 ))
 	then
-		choose=$(dmenu_command_menu "Escolha uma música:" "${songs_list[@]##*/}")
+		choose=$(player_command_menu "Escolha uma música:" "${songs_list[@]##*/}")
 		# Se não for escolhida nenhuma música, encerrar o script
 		[[ -z $choose ]] && exit 0
 		songs+=($(grep --color=never "$choose$" "$1"))
 		player "${songs[@]}"
 	else
-		choose=$(dmenu_command_menu "Escolha uma das pastas de música:" "${songs_list[@]##*/}")
+		choose=$(player_command_menu "Escolha uma das pastas de música:" "${songs_list[@]##*/}")
 		# Se nenhuma playlist for escolhida, encerrar o script
 		[[ -n $choose ]] && notify-send -t 6000 "${SCRIPT_NAME^^}" "Escutando músicas da pasta: $choose" || exit 0
 		songs+=($(shuf < <(grep --color=never "$choose/" "$MUSIC_LIST")))
@@ -141,39 +136,47 @@ tracking_music(){
 
 init_files(){
 	# Criando arquivo e diretórios
-	[[ ! -p "$CMD_FIFO_FILE" ]] && mkfifo "$CMD_FIFO_FILE"
-	[[ ! -d $DMENU_PATH ]] && mkdir "$DMENU_PATH"
-	[[ ! -e "$MUSIC_LIST" ]] && update_songs_list
+	[[ ! -p $CMD_FIFO_FILE ]] && mkfifo "$CMD_FIFO_FILE"
+	[[ ! -d $PLAYER_DIR ]] && mkdir "$PLAYER_DIR"
+	[[ ! -e $MUSIC_LIST ]] && update_songs_list
 }
 
-run_dmenu(){
-	dmenu -i -f -l "$MENU_DMENU_ROWS" -fn "Source Code Pro Medium:size=14"
+run_player(){
+	dmenu -i -f -l "$PLAYER_MENU_ROWS" -fn "Source Code Pro Medium:size=14"
 }
 
-dmenu_command_menu(){
-	printf '%s\n' "$@" | run_dmenu
+player_command_menu(){
+	printf '%s\n' "$@" | run_player
 }
 
-dmenu_options(){
-	if [[ -z ${MUSIC_PLAYING:-$(pgrep -a "^${PLAY[0]}")} ]]
+player_options(){
+	if [[ -z ${MUSIC_PLAYING:=$(pgrep -a "^${PLAY[0]}")} ]]
    	then
-		MENU_DMENU=("[1] - [Procurar por Música]" "[2] - [Escolher por Músicas por Pasta]" "[3] - [Atualizar lista de Músicas]")
+		PLAYER_MENU=("[1] - [Procurar por Música]" \
+			"[2] - [Escolher por Músicas por Pasta]" \
+			"[3] - [Atualizar lista de Músicas]")
 	else
 		if (( $(< "$MODULO") ))
 		then
-			MENU_DMENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" "[$KEY_REPEAT] - [Repeat!]" "[$KEY_KILL_MUSIC] - [Parar Música!]")
+			PLAYER_MENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" \
+				"[$KEY_REPEAT] - [Repeat!]" \
+				"[$KEY_KILL_MUSIC] - [Parar Música!]")
 		else
-			MENU_DMENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" "[$KEY_REPEAT] - [Repeat!]" "[$KEY_NEXT] - [Próxima Música!]" "[$KEY_PREVIOUS] - [Música Anterior!]" "[$KEY_PLAYLIST] - [Encerrar Playlist!]")
+			PLAYER_MENU=("[$KEY_PLAY/$KEY_STOP] - [Play!/Stop!]" \
+				"[$KEY_REPEAT] - [Repeat!]" \
+				"[$KEY_NEXT] - [Próxima Música!]" \
+				"[$KEY_PREVIOUS] - [Música Anterior!]" \
+				"[$KEY_PLAYLIST] - [Encerrar Playlist!]")
 		fi
 	fi
-	MENU_DMENU_ROWS=$(( ${#MENU_DMENU[@]} + 1 ))
+	PLAYER_MENU_ROWS=$(( ${#PLAYER_MENU[@]} + 1 ))
 }
 
-dmenu_main_menu(){
-	dmenu_options
-	MAIN_MENU=$(dmenu_command_menu "${SCRIPT_NAME^^} - MENU:" "${MENU_DMENU[@]}")
-	[[ -z $MAIN_MENU ]] && exit 0
-	case "${MAIN_MENU:1:1}" in
+main_menu(){
+	player_options
+	PLAYER_MAIN_MENU=$(player_command_menu "${SCRIPT_NAME^^} - MENU:" "${PLAYER_MENU[@]}")
+	[[ -z $PLAYER_MAIN_MENU ]] && exit 0
+	case "${PLAYER_MAIN_MENU:1:1}" in
 		(1) 
 			playlist_queue "$MUSIC_LIST" "1";;
 		(2) 
@@ -183,7 +186,7 @@ dmenu_main_menu(){
 		($KEY_PLAY|$KEY_STOP) 
 			pause_song;;
 		($KEY_REPEAT) 
-			toggle_repeat;;
+			toggle "$REPEAT";;
 		($KEY_PLAYLIST) 
 			process_kill "0";;
 		($KEY_KILL_MUSIC|$KEY_NEXT) 
@@ -196,9 +199,9 @@ dmenu_main_menu(){
 }
 
 main(){
-	init_variables "$0"
+	init_variables
 	init_files
-	dmenu_main_menu
+	main_menu
 }
 
 main
